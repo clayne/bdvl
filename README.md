@@ -105,6 +105,11 @@ mv build/*.i686 ~/install_dir/`./bdv soname`.i686 2>/dev/null
 
  * Automating this process sounds like it would be a good idea, but very messy.
    * In this case I believe human intervention is the best route.
+ * If you are using a **much** older version of bdvl & did not get a copy of `bedevil.h` before installation, gather what settings you can about the current installation.
+   * **The most important settings you must know**:
+     * `INSTALL_DIR`, `BDVLSO` (+ `SOPATH`)
+     * `PRELOAD_FILE`
+   * As long as you know at least these you can update an existing installation.
 
 <hr>
 
