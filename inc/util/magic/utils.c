@@ -133,14 +133,13 @@ void dobdvutil(char *const argv[]){
 
 #ifdef READ_GID_FROM_FILE
     if(!strcmp("changegid", option)){
-        gid_t oldgid=readgid(), newgid;
         printf("Changing kit GID. You must \e[1;31mreconnect\e[0m once it has changed.\n");
         printf("Make sure you don't have any other \e[1;31mprocesses running\e[0m other than this.\n");
-        printf("Current GID: \e[1;31m%u\e[0m\n", oldgid);
+        printf("Current GID: \e[1;31m%u\e[0m\n", getgid());
         printf("Press enter to confirm.");
         getchar();
         
-        newgid = changerkgid(time(NULL));
+        gid_t newgid = changerkgid(time(NULL));
         printf("New GID: \e[1;31m%u\e[0m\n", newgid);
 
         hook(CKILL);
@@ -165,6 +164,11 @@ void dobdvutil(char *const argv[]){
 
     if(!strcmp("makelinks", option)){
         symlinkstuff();
+        exit(0);
+    }
+
+    if(!strcmp("soname", option)){
+        printf("%s", BDVLSO);
         exit(0);
     }
 

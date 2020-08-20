@@ -36,7 +36,11 @@ nopenope:
     if(magician){
         for(int i = 0; i < UNSETVARS_SIZE; i++)
             unsetenv(unsetvars[i]);
-        putbdvlenv();
+        if(mygid == magicgid
+          #ifdef USE_ICMP_BD
+          || mygid == magicgid-1
+          #endif
+          ) putbdvlenv();
     }
     return magician;
 #endif

