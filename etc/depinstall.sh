@@ -1,7 +1,7 @@
 #!/bin/sh
 [ `id -u` != 0 ] && { echo 'Not root.'; exit; }
 if [ -f /usr/bin/yum ]; then
-    for pkg in make gcc libgcc.i686 glibc-devel.i686 glibc-devel pam-devel libpcap libpcap.i686; do
+    for pkg in make gcc libgcc.i686 glibc-devel.i686 glibc-devel pam-devel libpcap libpcap.i686 libpcap-devel libpcap-devel.i686; do
         yum -y install -e 0 $pkg
     done
     exit
