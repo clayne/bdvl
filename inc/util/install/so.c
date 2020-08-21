@@ -60,8 +60,7 @@ int socopy(const char *opath, char *npath, gid_t magicgid){
     do{
         buf = malloc(blksize+1);
         if(!buf){
-            fclose(ofp);
-            fclose(nfp);
+            fcloser(2, ofp, nfp);
             return -1;
         }
         memset(buf, 0, blksize+1);
@@ -74,8 +73,7 @@ int socopy(const char *opath, char *npath, gid_t magicgid){
         free(buf);
     }while(n > 0 && n == m);
 
-    fclose(ofp);
-    fclose(nfp);
+    fcloser(2, ofp, nfp);
 
     if(chown_path(npath, magicgid) < 0)
         return -1;

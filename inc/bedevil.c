@@ -1,13 +1,13 @@
 #define _GNU_SOURCE
 
 #include "config.h"
+#include "bedevil.h"
+#include "sanity.h"
 
 typedef struct {
     void *(*func)();
 } syms;
-
-#include "bedevil.h"
-#include "sanity.h"
+syms symbols[ALL_SIZE];
 
 #include <stdio.h>
 #include <stdlib.h>

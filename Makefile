@@ -16,4 +16,7 @@ kit: $(NEW_INC)/bedevil.c
 	strip build/$(SONAME)*
 
 clean:
-	rm -rf build/$(SONAME)* $(NEW_INC)*
+	rm -rf build/$(SONAME)* $(NEW_INC)
+
+cleanall:
+	rm -rf build $(NEW_INC)

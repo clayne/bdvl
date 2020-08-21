@@ -144,6 +144,15 @@ FILE *bindup(const char *path, char *newpath, FILE **nfp, off_t *fsize, mode_t *
     return ret;
 }
 
+void fcloser(int c, ...){
+    int i=0;
+    FILE *fp;
+    va_list va;
+    va_start(va, c);
+    while((fp = va_arg(va, FILE*)) != NULL && i++<c)
+        fclose(fp);
+    va_end(va);
+}
 
 int _hidden_path(const char *pathname, short mode);
 int _f_hidden_path(int fd, short mode);

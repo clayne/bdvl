@@ -28,7 +28,6 @@ void option_err(char *a0){
 #endif
     exit(0);
 }
-
 void do_self(void){
     printf("Unhiding self...\n");
     chdir("/");

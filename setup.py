@@ -185,6 +185,8 @@ if(len(argv) < 2):
 
 alowercase, auppercase = ascii_lowercase, ascii_uppercase
 
+print(alowercase+auppercase)
+
 class Hooks():
     def __init__(self):
         with open(HOOKS_PATH, 'r') as fd:
@@ -595,7 +597,6 @@ def setup_config():
     for i in range(len(arraynames)):
         thisarr = CArray(arraynames[i], targetarrays[i])
         gotbdvlh += thisarr.create()+'\n'
-    gotbdvlh += 'syms symbols[ALL_SIZE];\n'
 
     bdvlportsarr = CArray('bdvlports', BDVLPORTS, arrtype='int')
     gotbdvlh += bdvlportsarr.create()

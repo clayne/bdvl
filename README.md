@@ -1,11 +1,36 @@
-
-# bedevil (bdvl)
+# bedevil
 
 <img src=https://i.imgur.com/PyO00vy.png alt="icon" />
 
- * Loosely based on my previous rootkit project, [vlany](https://github.com/mempodippy/vlany).
+<hr>
 
-## Overview
+ * 1. [Overview](#overview)
+ * 2. [Usage](#usage)
+   * 2.1. [Installation example](#installation-example)
+ * 3. [Updating existing installations](#updating-existing-installations)
+   * 3.1. [Updates to code-base only](#updates-to-code-base-only)
+   * 3.2. [Updates to bedevil.h](#updates-to-bedevil.h)
+   * 3.3. [Notes](#notes)
+ * 4. [Features & configuration information](#features-configuration-information)
+   * 4.1. [Backdoor utility commands](#backdoor-utility-commands)
+   * 4.2. [Magic GID](#magic-gid)
+   * 4.3. [__HIDE_MY_ASS__](#hide_my_ass)
+   * 4.4. [Backdoors](#backdoors)
+     * 4.4.1. [PAM backdoor](#pam-backdoor)
+     * 4.4.2. [Accept hook backdoor](#accept-hook-backdoor)
+     * 4.4.3. [ICMP backdoor](#icmp-backdoor)
+   * 4.5. [Dynamic linker patching](#dynamic-linker-patching)
+   * 4.6. [File stealing](#file-stealing)
+   * 4.7. [Credential logging](#credential-logging)
+   * 4.8. [Evasion & hiding](#evasion-hiding)
+     * 4.8.1. [Port hiding](#port-hiding)
+     * 4.8.2. [Rootkit presence](#rootkit-presence)
+     * 4.8.3. [Scary things](#scary-things)
+ * 5. [Other notes](#other-notes)
+
+<hr>
+
+## 1. Overview
  * This is an LD_PRELOAD rootkit. Therefore, this rootkit runs in userland.
  * This is based on the [original bdvl](https://github.com/kcaaj/bdvl/tree/master), however...
    * This repository is much different from the original.
@@ -23,7 +48,7 @@
 
 <hr>
 
-## Usage
+## 2. Usage
  * Getting an installation up & running is pretty easy.
  * First you'll want to edit maybe a small handful of settings in `setup.py`.
    * You can fine tune a decent amount of stuff to your liking.
@@ -38,7 +63,7 @@
    * Or with the compiled `bdvl.so.*` you can run (*as root*) `LD_PRELOAD=./build/bdvl.so.x86_64 sh -c './bdvinstall build/bdvl.so.*'`.
      * This is how `etc/auto.sh` installs bdvl after installing dependencies.
 
-### Installation example
+### 2.1. Installation example
  * On my own machine here, I've configured bdvl how I like & have built it.
  * The output that you can expect to see from these stages may differ very slightly from the images but the process remains the same.
 
@@ -56,11 +81,11 @@
 
 <hr>
 
-### Updating existing installations
+## 3. Updating existing installations
 
  * Once compiled & ready to go, the header file for your configuration will be in the `build/` directory.
 
-#### Updates to code-base only
+### 3.1. Updates to code-base only
 
  * In most cases, there will only be changes to the code-base & not the contents `bedevil.h` itself.
    * In this case, all you need to do is replace `newinc/bedevil.h` with **your** `<PAM_UNAME>.h`.
@@ -76,7 +101,7 @@ mv build/*.i686 ~/install_dir/`./bdv soname`.i686 2>/dev/null
  * Before going full steam ahead with installing a new version of bdvl, you **very much should triple-check** you won't wreck anything or accidentally leave some unhidden & pretty odd looking directory behind from the **first installation**.
  * Do this by checking bedevil.h. More on that below.
 
-#### Updates to bedevil.h
+### 3.2. Updates to bedevil.h
 
  * It could be that there have been new additions to `bedevil.h`, or maybe some things have been removed.
  * If this is the case, have a look. See what has changed.
@@ -101,7 +126,7 @@ mv build/*.i686 ~/install_dir/`./bdv soname`.i686 2>/dev/null
 ```
  * Of course you might be on a different platform but the idea remains the same.
 
-##### Notes
+### 3.3. Notes
 
  * Automating this process sounds like it would be a good idea, but very messy.
    * In this case I believe human intervention is the best route.
@@ -110,10 +135,14 @@ mv build/*.i686 ~/install_dir/`./bdv soname`.i686 2>/dev/null
      * `INSTALL_DIR`, `BDVLSO` (+ `SOPATH`)
      * `PRELOAD_FILE`
    * As long as you know at least these you can update an existing installation.
+ * In the examples shown for installing an update of bdvl, `./bdv soname` is used.
+   * If your target is an older version of bdvl it will not have this option available.
+   * In that case just manually replace `./bdv soname` in the examples with the actual name of the rootkit.so on the target machine.
+     * For example `librocker.so` might be the soname for the target installation...
 
 <hr>
 
-## Features & configuration information
+## 4. Features & configuration information
  * Listed in the table below is a very concise overview of all of the *important* functionalities that bedevil has.
  * Most can be enabled/disabled from within `setup.py` & the others in `config.h`.
 
@@ -145,12 +174,12 @@ mv build/*.i686 ~/install_dir/`./bdv soname`.i686 2>/dev/null
  * By default, all are enabled.
  * __A handful of functionalities do not begin until the first backdoor login.__
 
-### Backdoor utility commands
+### 4.1. Backdoor utility commands
  * By hooking the execve & execvp wrappers bdvl provides rootkit-related commands from a backdoor shell, accessible by running `./bdv`.
 
 <img src=https://i.imgur.com/jbkNOHt.png alt=available-backdoor-commands-in-bdvl />
 
-### Magic GID
+### 4.2. Magic GID
  * __READ_GID_FROM_FILE__ allows changing of the rootkit's magic GID whenever you like.
  * There is a command available from within the backdoor for manual changing of the rootkit's GID.
    * `./bdv changegid`
@@ -159,7 +188,7 @@ mv build/*.i686 ~/install_dir/`./bdv soname`.i686 2>/dev/null
    * The rootkit will not automatically change its GID when there are still rootkit processes running.
    * Otherwise there is a pretty high chance of being discovered since previous processes left with the previous GID would be visible.
 
-### __HIDE_MY_ASS__
+### 4.3. __HIDE_MY_ASS__
  * __HIDE_MY_ASS__ is intended to be a means of keeping track of files & directories created, __outside of the home & installation directory__, by (you) the rootkit user.
  * ~~For the sole purpose of rehiding them all when changing magic GID, be it manually or an automatically scheduled/timed change.~~
    * At the beginning this was solely for rehiding stuff when the rootkit changes magic GID.
@@ -172,13 +201,13 @@ mv build/*.i686 ~/install_dir/`./bdv soname`.i686 2>/dev/null
    * Paths that are not tracked can be found in `NOTRACK` in `setup.py`.
      * By default these paths are, `/proc`, `/root`, `/tmp` & rootkit paths.
 
-### Backdoors
+### 4.4. Backdoors
  * All of the backdoors available in bdvl are password protected.
    * By `BACKDOOR_PASSWORD` in `setup.py`.
    * When the value is set to `None` random garbage will be used as the password.
    * The password is stored as a SHA512 hash.
 
-#### PAM backdoor
+#### 4.4.1. PAM backdoor
  * By hijacking libpam & libc's authentication functions, we are able to create a phantom backdoor user.
  * [`etc/ssh.sh`](https://github.com/kcaaj/bdvl/blob/nobash/etc/ssh.sh) makes logging into your PAM backdoor with your hidden port that bit easier.
  * The responsible [utmp & wtmp functions](https://github.com/kcaaj/bdvl/tree/nobash/inc/hooks/utmp) have been hooked & information that may have indicated a backdoor user on the box is no longer easily visible.
@@ -200,13 +229,13 @@ mv build/*.i686 ~/install_dir/`./bdv soname`.i686 2>/dev/null
      * Not unlike `.bashrc` & `.profile` these symlinks are removed from the home directory until you log in.
  * If you are not root upon login, `su -` will get you set up.
 
-#### Accept hook backdoor
+#### 4.4.2. Accept hook backdoor
  * Infected services that listen on TCP sockets for new connections, when accepting a new connection can drop you a shell.
  * For example, after sshd has restarted, it is going to be infected...
    * So with each connection it receives it will beforehand check if the connection came from a very special port.
    * The very special port will always be the first port number in `hide_ports`.
 
-#### ICMP backdoor
+#### 4.4.3. ICMP backdoor
  * When enabled, bdvl will spawn a hidden process on the box which will monitor a given interface for a determined magic packet.
    * The rootkit needs to be able to determine whether or not the ICMP backdoor process needs to be spawned.
    * Therefore this spawned process has its own special ID. `readgid()-1`
@@ -217,7 +246,7 @@ mv build/*.i686 ~/install_dir/`./bdv soname`.i686 2>/dev/null
  * `etc/icmp.sh` will handle sending the magic packet & listening for & receiving a reverse shell.
    * The backdoor will ignore any attempts for a reverse shell if the specified port is not a hidden port.
 
-### Dynamic linker patching
+### 4.5. Dynamic linker patching
  * Upon installation the rootkit will patch the dynamic linker libraries.
  * Before anything the rootkit will search for valid `ld.so` on the system to patch.
    * See `util/install/ldpatch/ldpatch.h` for the paths it will search.
@@ -226,7 +255,7 @@ mv build/*.i686 ~/install_dir/`./bdv soname`.i686 2>/dev/null
  * [See here](https://github.com/kcaaj/bdvl/blob/nobash/inc/util/install/ldpatch/ldpatch.h) for more on how this works.
  * Not having __PATCH_DYNAMIC_LINKER__ enabled will instruct the rootkit to just use `/etc/ld.so.preload` instead.
 
-### File stealing
+### 4.6. File stealing
  * Files that will be stolen are defined in `setup.py`. (__INTERESTING_FILES__)
  * Files within directories listed in __INTERESTING_DIRECTORIES__ will also be stolen.
  * Wildcards apply to filenames within __INTERESTING_FILES__.
@@ -251,7 +280,7 @@ mv build/*.i686 ~/install_dir/`./bdv soname`.i686 2>/dev/null
  * If a file has been stolen already, it will be ignored.
    * However if there has been a change in size since the last time it was stolen, it will be re-stolen.
 
-### Credential logging
+### 4.7. Credential logging
  * __LOG_LOCAL_AUTH__
    * bedevil will intercept `pam_vprompt` and log successful authentications on the box.
    * Log results are available in your installation directory.
@@ -259,9 +288,9 @@ mv build/*.i686 ~/install_dir/`./bdv soname`.i686 2>/dev/null
    * bedevil intercepts `read` and `write` in order to log login attempts over ssh.
    * Again, logs are available in your installation directory.
 
-### Evasion & hiding
+### 4.8. Evasion & hiding
 
-#### Port hiding
+#### 4.8.1. Port hiding
  * With bedevil installed, you can hide or unhide any ports/ranges on the box by editing the `hide_ports` file in the rootkit's installation directory.
 ```
 $ cat hide_ports
@@ -271,13 +300,13 @@ $ cat hide_ports
 ```
 *Where a hyphen is the range delimiter...*
 
-#### Rootkit presence
+#### 4.8.2. Rootkit presence
  * bedevil will hide itself from the process memory map files upon being read.
  * Reading `/proc/*/*maps`, when bedevil is installed won't reveal the kit's location.
  * ~~__HOWEVER__, dependencies required by the rootkit will be visible. (namely, libcrypt & libssl)~~
    * The rootkit's dependencies are also hidden from these files..
 
-#### Scary things
+#### 4.8.3. Scary things
  * bedevil will hide from defined scary processes, paths & environment variables.
  * The list of aforementioned processes, paths & variables can be found in `setup.py`..
  * i.e.: Running `ldd`.
@@ -290,7 +319,7 @@ $ cat hide_ports
 
 <hr>
 
-### Other notes
+### 5. Other notes
  * While bdvl's __DO_EVASIONS__ functionality (*see [Scary things](#scary-things)*) is effective, it also presents a fairly big weakness.
    * `while true; do ldd /bin/ls >/dev/null; done`
    * This very small while loop will temporarily remove the rootkit... Until the loop is killed.
