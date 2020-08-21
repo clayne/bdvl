@@ -5,17 +5,18 @@ char *sogetplatform(char *sopath){
          *sofiletok = strtok(sofilecpy, "."),
          *curplatform;
 
-    while(sofiletok != NULL){
+    while(sofiletok != NULL && platform == NULL){
         for(int i = 0; i < VALID_PLATFORMS_SIZE; i++){
             curplatform = valid_platforms[i];
+            
+            if(!strncmp("arm", sofiletok, 3))
+                sofiletok=sofiletok+3;
+
             if(!strcmp(sofiletok, curplatform)){
                 platform = strdup(sofiletok);
                 break;
             }
         }
-
-        if(platform != NULL)
-            break;
 
         sofiletok = strtok(NULL, ".");
     }
@@ -31,9 +32,7 @@ char *sogetpath(char *sopath){
     platform = sogetplatform(sopath);
     if(platform == NULL) return NULL;
 
-    pathsize = LEN_INSTALL_DIR +
-               strlen(BDVLSO) +
-               strlen(platform) + 4;
+    pathsize = LEN_INSTALL_DIR+LEN_BDVLSO+strlen(platform)+4;
 
     ret = malloc(pathsize);
     if(ret){

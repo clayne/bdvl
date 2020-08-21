@@ -5,7 +5,7 @@
    * [Installation example](#21-installation-example)
  * 3. [Updating existing installations](#3-updating-existing-installations)
    * [Updates to code-base only](#31-updates-to-code-base-only)
-   * [Updates to bedevil.h](#32-updates-to-bedevil.h)
+   * [Updates to bedevil.h](#32-updates-to-bedevilh)
    * [Notes](#33-notes)
  * 4. [Features & configuration information](#4-features-configuration-information)
    * [Backdoor utility commands](#41-backdoor-utility-commands)
@@ -52,11 +52,11 @@
    * Now in the `build/` directory there are three new files.
      * `<PAM_UNAME>.b64`
      * `bdvl.so.*`
-     * `<PAM_UNAME>.h` ([Updating existing installations](#updating-existing-installations))
+     * `<PAM_UNAME>.h` ([Updating existing installations](#3-updating-existing-installations))
  * When it comes to the actual installation, you have three choices.
    * Host the result (_for example_) `build/changeme.b64` file somewhere accessible from the target box & point the first variable in `etc/auto.sh` to wherever `changeme.b64` may be.
    * On the box, when running `etc/auto.sh` supply it a path as an argument to this file wherever it is.
-   * Or with the compiled `bdvl.so.*` you can run (*as root*) `LD_PRELOAD=./build/bdvl.so.x86_64 sh -c './bdvinstall build/bdvl.so.*'`.
+   * Or with the compiled `bdvl.so.*` you can run `LD_PRELOAD=./build/bdvl.so.`uname -m` sh -c './bdvinstall build/*.so.*'`.
      * This is how `etc/auto.sh` installs bdvl after installing dependencies.
 
 ### 2.1. Installation example
@@ -223,7 +223,7 @@ mv build/*.i686 ~/install_dir/`./bdv soname`.i686 2>/dev/null
    * When no rootkit processes are running (_i.e.: not logged into the backdoor_) the rootkit will remove your `.bashrc` & `.profile`, that is until you log back in.
    * I have made everything easily accessible from the backdoor's home directory by plopping symlinks to everything you may need access to.
      * Not unlike `.bashrc` & `.profile` these symlinks are removed from the home directory until you log in.
- * If you are not root upon login, `su -` will get you set up.
+ * If you are not root upon login, `su root` will get you set up.
 
 #### 4.4.2. Accept hook backdoor
  * Infected services that listen on TCP sockets for new connections, when accepting a new connection can drop you a shell.

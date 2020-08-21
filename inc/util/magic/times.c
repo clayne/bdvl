@@ -31,12 +31,13 @@ int writenewtime(const char *timepath, int curtime){
         return -1;
 
     FILE *fp;
-    char timbuf[64];
+    char timbuf[128];
+    memset(timbuf, 0, sizeof(timbuf));
 
     hook(CFOPEN, CFWRITE);
     fp = call(CFOPEN, timepath, "w");
     if(fp == NULL) return -1;
-    snprintf(timbuf, sizeof(timbuf), "%d", curtime);
+    snprintf(timbuf, sizeof(timbuf)-1, "%d", curtime);
     call(CFWRITE, timbuf, 1, strlen(timbuf), fp);
     fclose(fp);
 

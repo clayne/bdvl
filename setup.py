@@ -185,8 +185,6 @@ if(len(argv) < 2):
 
 alowercase, auppercase = ascii_lowercase, ascii_uppercase
 
-print(alowercase+auppercase)
-
 class Hooks():
     def __init__(self):
         with open(HOOKS_PATH, 'r') as fd:
