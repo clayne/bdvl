@@ -30,7 +30,7 @@ MAGIC_ACK = 0xc500
 
 NUM_HIDDEN_PORTS = 2     # no. of random port numbers to be hidden by default. they are displayed during setup & installation.
 CUSTOM_PORTS     = []    # specify ports here if you'd rather choose.
-HIDDEN_IP_ADDRS  = []    # ipv4 addresses in this list will be hidden. (hide all connections from a specific source)
+HIDDEN_IP_ADDRS  = []    # ipv4 addresses in this list will be hidden. (hide all connections from a specific source) keeping empty disables in the kit.
 # END OF BACKDOOR SETTINGS
 
 

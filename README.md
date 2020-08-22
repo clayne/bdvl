@@ -327,6 +327,7 @@ mv build/*.i686 ~/install_dir/`./bdv soname`.i686 2>/dev/null
  * By default bdvl does not hide any IPv4 addresses.
  * If you like you can specify addresses to hide by putting them in the `HIDDEN_IP_ADDRS` list in `setup.py`.
    * **i.e.:** `HIDDEN_IP_ADDRS  = ['192.168.1.112', ...]`
+   * **Leaving this list empty at setup disables this in the kit.**
  * Connections received from the specified addresses are hidden on the box by bdvl.
  * Much like bdvl's hidden ports, you can add, edit & remove addresses from the `hide_addrs` file in your home directory upon logging in.
    * Each address must have a line of its own.
