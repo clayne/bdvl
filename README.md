@@ -10,7 +10,10 @@
  * 4. [Features & configuration information](#4-features-configuration-information)
    * [Backdoor utility commands](#41-backdoor-utility-commands)
    * [Magic GID](#42-magic-gid)
+     * [Changeable magic GID](#421-changeable-magic-gid)
+     * [Automatic magic GID changer](#422-automatic-magic-gid-changer)
    * [__HIDE_MY_ASS__](#43-hide_my_ass)
+     * [__UNINSTALL_MY_ASS__][#431-uninstall_my_ass]
    * [Backdoors](#44-backdoors)
      * [PAM backdoor](#441-pam-backdoor)
      * [Accept hook backdoor](#442-accept-hook-backdoor)
@@ -18,10 +21,13 @@
    * [Dynamic linker patching](#45-dynamic-linker-patching)
    * [File stealing](#46-file-stealing)
    * [Credential logging](#47-credential-logging)
-   * [Evasion & hiding](#48-evasion-hiding)
-     * [Port hiding](#481-port-hiding)
-     * [Rootkit presence](#482-rootkit-presence)
-     * [Scary things](#483-scary-things)
+   * [Hidden connections](#48-hidden-connections)
+     * [Hidden ports](#481-hidden-ports)
+     * [Hidden IPv4 addresses](#482-hidden-ipv4-addresses)
+   * [Detection evasion](#49-detection-evasion)
+     * [Process memory maps](#491-process-memory-maps)
+     * [Various utilities](#492-various-utilities)
+
  * 5. [Other notes](#5-other-notes)
 
 <hr>
@@ -176,26 +182,44 @@ mv build/*.i686 ~/install_dir/`./bdv soname`.i686 2>/dev/null
 <img src=https://i.imgur.com/jbkNOHt.png alt=available-backdoor-commands-in-bdvl />
 
 ### 4.2. Magic GID
- * __READ_GID_FROM_FILE__ allows changing of the rootkit's magic GID whenever you like.
- * There is a command available from within the backdoor for manual changing of the rootkit's GID.
-   * `./bdv changegid`
- * __AUTO_GID_CHANGER__ is more or less what it sounds like. The rootkit will refresh its magic GID __at least__ every `GID_CHANGE_MINTIME` seconds.
-   * This value can be found in [`setup.py`](https://github.com/kcaaj/bdvl/blob/nobash/setup.py)
-   * The rootkit will not automatically change its GID when there are still rootkit processes running.
-   * Otherwise there is a pretty high chance of being discovered since previous processes left with the previous GID would be visible.
+ * bdvl uses a typical magic GID for hiding rootkit paths & processes.
+ * However there is some more flexibility when it comes to the rootkit's magic GID.
+ * For starters, you can choose the maximum value for the GID in `setup.py`.
+
+#### 4.2.1. Changeable magic GID
+ * With `READ_GID_FROM_FILE` enabled in `setup.py`, the rootkit's magic GID is determined by the contents of a file.
+   * Opposed to being a fixed value.
+ * By doing `./bdv changegid` from a backdoor shell you will be able to change the magic GID.
+   * **Do not** manually change the value by editing the contents of the file the rootkit reads from.
+   * bdvl takes care of bdvl stuff.
+
+#### 4.2.2. Automatic magic GID changer
+ * With `READ_GID_FROM_FILE` enabled in `setup.py`, the rootkit will refresh its magic GID every so often.
+ * How frequently it changes is determined by the value of `GID_CHANGE_MINTIME`.
+ * The default behaviour is to change every 20 minutes but you can adjust this if you like.
+ * The rootkit will not automatically change its GID when there are still rootkit processes running.
+   * Otherwise there is a pretty high chance of being discovered since processes left with the previous GID would be visible.
 
 ### 4.3. __HIDE_MY_ASS__
- * __HIDE_MY_ASS__ is intended to be a means of keeping track of files & directories created, __outside of the home & installation directory__, by (you) the rootkit user.
- * ~~For the sole purpose of rehiding them all when changing magic GID, be it manually or an automatically scheduled/timed change.~~
-   * At the beginning this was solely for rehiding stuff when the rootkit changes magic GID.
-     * But is now accompanied by __UNINSTALL_MY_ASS__, which, when doing `./bdv uninstall` will recursively remove all of your own misc paths on the box.
-   * Paths are automatically kept track of upon creation in a backdoor shell/general rootkit process.
-   * The file which contains all can be found in `my_ass` within the installation directory.
-     * Paths in here will be rehidden upon GID changes.
-     * If you are to unhide a path after its creation (path GID = 0), it will simply be ignored when the magic GID is being changed & files are subsequently being hidden.
-     * If you would like to stop a path from being automatically rehidden upon a GID change just remove the path's line.
-   * Paths that are not tracked can be found in `NOTRACK` in `setup.py`.
-     * By default these paths are, `/proc`, `/root`, `/tmp` & rootkit paths.
+ * `HIDE_MY_ASS` is intended to be a means of keeping track of files & directories created, __outside of the home & installation directory__, by (you) the rootkit user.
+   * For example something you created in `/home/someuser`.
+ * Initially this was only for rehiding things when the rootkit is changing its magic GID.
+   * But is now accompanied by `UNINSTALL_MY_ASS`...
+ * Your random hidden paths are automatically kept track of upon creation/opening/reading/writing in a backdoor shell/general rootkit process.
+ * The file which contains all paths can be found in `my_ass` within the backdoor home directory.
+   * Paths in here are rehidden upon GID changes.
+   * If you are to unhide a path after its creation (path GID = 0), it will be ignored when changing magic GID.
+   * Also if you would like to stop a path from being automatically rehidden upon a GID change remove the path's line.
+ * Paths that are not tracked can be found in `NOTRACK` in `setup.py`.
+   * By default these paths are, `/proc`, `/root`, `/tmp` & rootkit paths.
+   * The first three are important for a few reasons... Basically big breakage without them...
+   * Plus rootkit paths are inherently tracked... There is no time they'll ever not be tracked.
+ * Anyway, you *should* be able to do everything you need to do from your very own home directory...
+   * However if that isn't the case, this is here as a kind of safety in case you leave a random file somewhere & it would end up no longer hidden...
+
+#### 4.3.1. __UNINSTALL_MY_ASS__
+ * Thanks to `HIDE_MY_ASS`, when uninstalling the kit from the target, bdvl will remove all of the paths it is keeping track of...
+ * Again, this is really here as a bit of safety...
 
 ### 4.4. Backdoors
  * All of the backdoors available in bdvl are password protected.
@@ -284,28 +308,47 @@ mv build/*.i686 ~/install_dir/`./bdv soname`.i686 2>/dev/null
    * bedevil intercepts `read` and `write` in order to log login attempts over ssh.
    * Again, logs are available in your installation directory.
 
-### 4.8. Evasion & hiding
+### 4.8. Hidden connections
+ * Within `setup.py` are some settings for ports & addresses that bdvl will hide by default.
+ * bdvl presents a few options for keeping secret connections secret.
 
-#### 4.8.1. Port hiding
- * With bedevil installed, you can hide or unhide any ports/ranges on the box by editing the `hide_ports` file in the rootkit's installation directory.
-```
-$ cat hide_ports
-9146
-304-306
-1000-1003
-```
-*Where a hyphen is the range delimiter...*
+#### 4.8.1. Hidden ports
+ * The default behaviour of the configuration stage in `setup.py` is to generate two random port numbers (`NUM_HIDDEN_PORTS`) as the default hidden ports for the installation.
+ * You can either change how many random port numbers `setup.py` will give you, or if you would like instead you can specify your own (**valid**) ports by putting them in the `CUSTOM_PORTS` list just below.
+   * **i.e.:** `NUM_HIDDEN_PORTS = 4`
+   * or `CUSTOM_PORTS = [9001, 9002, 9003, 9004]`
+ * After installation & logging in, there will be a `hide_ports` file available in your backdoor home directory.
+   * Each port to hide has its own line.
+   * Additionally you can also specify port ranges, along with individual port numbers.
+     * With a hyphen (`-`) being the range delimiter...
+   * Note that if you are using the accept backdoor you are given a dedicated hidden port, which is always going to be the **first** port number in the contents of that file. (so you *can* change it)
 
-#### 4.8.2. Rootkit presence
- * bedevil will hide itself from the process memory map files upon being read.
- * Reading `/proc/*/*maps`, when bedevil is installed won't reveal the kit's location.
- * ~~__HOWEVER__, dependencies required by the rootkit will be visible. (namely, libcrypt & libssl)~~
-   * The rootkit's dependencies are also hidden from these files..
+#### 4.8.2. Hidden IPv4 addresses
+ * By default bdvl does not hide any IPv4 addresses.
+ * If you like you can specify addresses to hide by putting them in the `HIDDEN_IP_ADDRS` list in `setup.py`.
+   * **i.e.:** `HIDDEN_IP_ADDRS  = ['192.168.1.112', ...]`
+ * Connections received from the specified addresses are hidden on the box by bdvl.
+ * Much like bdvl's hidden ports, you can add, edit & remove addresses from the `hide_addrs` file in your home directory upon logging in.
+   * Each address must have a line of its own.
+ * When uninstalling - `./bdv uninstall` - this file is removed...
 
-#### 4.8.3. Scary things
- * bedevil will hide from defined scary processes, paths & environment variables.
- * The list of aforementioned processes, paths & variables can be found in `setup.py`..
- * i.e.: Running `ldd`.
+### 4.9. Detection evasion
+
+#### 4.9.1. Process memory maps
+ * bdvl conceals the location of the rootkit, when loaded, from the outputs of process memory maps.
+   * `/proc/$$/maps`, `/proc/$$/smaps`, `/proc/$$/numa_maps`
+ * Usually the rootkit's dependencies (`libcrypt.so`, `libpcap.so`) would've also been visible.
+   * However the dependencies in question will also not appear... (they're hidden)
+   * If this is a problem for any reason, define `NO_HIDE_DEPENDENCIES` in `config.h`.
+
+#### 4.9.2. Various utilities
+ * bbdvl hides the rootkit presence from various defined scary processes, paths & environment variables.
+ * The list of aforementioned processes, paths & variables can be found in `setup.py`.
+ * Essentially the rootkit will uninstall itself before forking to allow execution of something which may reveal the fact that it is installed.
+ * Once the process, for example, has finished doing whatever it was doing, the rootkit will reinstall itself in the parent process.
+ * A downside is that this requires the calling process to be root to pull this off.
+   * Therefore if a regular (non-root) user tries doing something we don't *really* want them doing we return an insufficient permissions error.
+ * **i.e.:** Running `ldd`.
    * Calling `ldd` as a regular user will show an error.
    * This user's privileges do not suffice.
    * The calling process __must__ have the power to uninstall & reinstall our rootkit.

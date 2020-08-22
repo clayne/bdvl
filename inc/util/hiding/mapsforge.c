@@ -1,6 +1,10 @@
 char *badstring(char *buf){
     char *ret = NULL;
-    for(int i=0; i < sizeofarr(bads) && ret == NULL; i++)
+    size_t badsize = sizeofarr(bads);
+#ifdef NO_HIDE_DEPENDENCIES
+    badsize = 1;
+#endif
+    for(int i=0; i < badsize && ret == NULL; i++)
         ret = strstr(buf, bads[i]);
     return ret;
 }

