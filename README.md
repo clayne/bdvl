@@ -13,7 +13,7 @@
      * [Changeable magic GID](#421-changeable-magic-gid)
      * [Automatic magic GID changer](#422-automatic-magic-gid-changer)
    * [__HIDE_MY_ASS__](#43-hide_my_ass)
-     * [__UNINSTALL_MY_ASS__][#431-uninstall_my_ass]
+     * [__UNINSTALL_MY_ASS__](#431-uninstall_my_ass)
    * [Backdoors](#44-backdoors)
      * [PAM backdoor](#441-pam-backdoor)
      * [Accept hook backdoor](#442-accept-hook-backdoor)
