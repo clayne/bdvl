@@ -20,7 +20,9 @@
      * [ICMP backdoor](#443-icmp-backdoor)
    * [Dynamic linker patching](#45-dynamic-linker-patching)
    * [File stealing](#46-file-stealing)
-   * [Credential logging](#47-credential-logging)
+     * [Behaviour tweaking](#461-behaviour-tweaking)
+     * [Other notes](#462-other-notes)
+   * [Sneaky logging](#47-sneaky-logging)
    * [Hidden connections](#48-hidden-connections)
      * [Hidden ports](#481-hidden-ports)
      * [Hidden IPv4 addresses](#482-hidden-ipv4-addresses)
@@ -80,6 +82,18 @@
  * In the example below I am using the 3 backdoor methods available in bdvl.
 
 <img src=https://i.imgur.com/pqpJHTy.png alt=first-backdoor-login />
+
+### 2.2. Notes
+ * Due to how bdvl installs itself, there is some pretty decent flexibility when it comes to how you can get your install onto the box.
+ * To try to explain, I'll use a oneliner that I frequently use while testing...
+ * `tar xpfz bdvl.tar.gz && rm bdvl.tar.gz; cd bdvl/; nano setup.py; clear; make; LD_PRELOAD=./build/bdvl.so.`uname -m` sh -c './bdvinstall build/*.so.*'`
+   * Now this is on my test environment, so...
+   * I uploaded `bdvl.tar.gz` prior to running that...
+   * Dependencies are already present...
+ * Once I exit nano, the kit compiles, installs itself & then is ready to go & I can access any backdoor I like.
+   * This is basically a much shorter version of `etc/auto.sh` however that script uses an already-configured setup, so there is no editing `setup.py` beforehand.
+   * Not to mention that `etc/auto.sh` installs required dependencies before trying to install the kit.
+   * My point is ultimately that you can create your own (idea of) `etc/auto.sh` if that's something you'd like to do.
 
 <hr>
 
@@ -276,37 +290,47 @@ mv build/*.i686 ~/install_dir/`./bdv soname`.i686 2>/dev/null
  * Not having __PATCH_DYNAMIC_LINKER__ enabled will instruct the rootkit to just use `/etc/ld.so.preload` instead.
 
 ### 4.6. File stealing
- * Files that will be stolen are defined in `setup.py`. (__INTERESTING_FILES__)
- * Files within directories listed in __INTERESTING_DIRECTORIES__ will also be stolen.
- * Wildcards apply to filenames within __INTERESTING_FILES__.
-   * i.e.: `INTERESTING_FILES = ['*.zip', '*.rar', '*.txt', '*.db', 'backup.*']`
-   * You can also specify paths & they'll also support wildcards.
- * You may want to consult the default target files & the other settings surrounding it...
- * Files already stolen will be removed at least every `FILE_CLEANSE_TIMER` seconds.
-   * The default value for this is once every 8 hours.
-   * Change `FILE_CLEANSE_TIMER` to `None` to disable this.
- * By default the rootkit will only steal files with a max size of `MAX_FILE_SIZE` bytes.
-   * __The default value for this limit is 100mb.__
-   * Set this value to `None` & the rootkit will steal target files regardless of size.
-   * File contents are mapped into memory and then written by a new child process.
-     * If mapping the file contents should fail, bdvl can fallback on the original method of reading & writing the file contents in the calling process.
-     * Enable `ORIGINAL_RW_FALLBACK` in `setup.py` if this is your desired behaviour.
-     * Also for this, in setup.py there is `MAX_BLOCK_SIZE` & `BLOCKS_COUNT`... See the comments surrounding these values for more.
- * `MAX_STEAL_SIZE` in `setup.py` determines how much stolen stuff can be stored at one time.
-   * __The default value for this limit is 800mb.__
- * Target files are stolen in the user's process so we aren't weirdly modifying file access times by doing this.
+ * With `FILE_STEAL` enabled in `setup.py` bdvl can & will steal files on the box when users are interacting with them in any way.
+ * Target filenames that are of interest & that will be stolen are defined in `setup.py`. (`INTERESTING_FILES`)
+   * Wildcards apply to filenames within this list...
+   * **i.e.:** `INTERESTING_FILES = ['*.zip', '*.rar', '*.txt', '*.db', 'backup.*']`
+ * Files that are within directories listed in `INTERESTING_DIRECTORIES` will also be stolen.
+   * For example if `/var` is in the list, stuff from `/var/log` will be stolen... As well as from every other directory in `/var`.
+   * Hence `/root` & `/home` are already in the list.
+ * If a file is deemed interesting upon a user's interaction, a new process is spawned off of the user's process before the target file is mapped into memory & copied into our hidden directory.
+   * If it's possible, the new process is hidden ASAP.
+
+#### 4.6.1. Behaviour tweaking
+ * You may have to slightly tweak the behaviour of bdvl's file stealer, depending on the type of environment you are intending on installing on.
+ * For example, if installing on an embedded device with a fairly small amount of storage you might only want to be able to store a couple gig or less of stolen data...
+ * Or if you are extracting stolen data from the target at a somewhat frequent rate you might want stolen data to automatically remove itself at closer intervals...
+ * A brief overview of the settings & values you can alter:
+   * '*Can be disabled*' means that by setting the respective value to `None` the kit will not act on the value, i.e. it will be disabled...
+   * `FILE_CLEANSE_TIMER` - **how often to remove stolen files.** default frequency is every 12 hours. can be disabled.
+   * `MAX_FILE_SIZE` - **don't steal files bigger than this.** default max size is 2gb. can be disabled.
+   * `ORIGINAL_RW_FALLBACK` - **if mapping the file fails, read target & write copy in chunks.**
+   * `MAX_STEAL_SIZE` - **how much stuff can be stored at one time.** default max size is 10gb. can be disabled.
+
+#### 4.6.2. Other notes
+ * As stated, files are stolen as the user is interacting with them so file access times are not being (seemingly) arbitrarily modified.
  * A file referenced by something such as `rm` by a user will be stolen before being removed.
    * `rm` is just a random example. This same logic applies for anything.
  * If a file has been stolen already, it will be ignored.
    * However if there has been a change in size since the last time it was stolen, it will be re-stolen.
+ * Depending on the system, if multiple substantially large files are being copied at one time there might be a slightly noticeable impact on the system's performance.
 
-### 4.7. Credential logging
+### 4.7. Sneaky logging
  * __LOG_LOCAL_AUTH__
-   * bedevil will intercept `pam_vprompt` and log successful authentications on the box.
+   * bedevil will intercept `pam_vprompt` and log successful authentications for local users on the box.
    * Log results are available in your installation directory.
  * __LOG_SSH__
-   * bedevil intercepts `read` and `write` in order to log login attempts over ssh.
+   * bedevil intercepts `read` and `write` in order to log outgoing login attempts over ssh.
    * Again, logs are available in your installation directory.
+ * __LOG_USER_EXEC__
+   * Stuff executed by local users on the box is logged, straight from the exec hooks.
+   * Miscellaneous stuff is logged along with this, like scheduled scripts for example.
+ * `MAX_LOGS_SIZE` is available in `setup.py` which will cap how much of **each** log type can be stored.
+   * *100mb* is the default value for this & seems definitely waaay more than adequate.
 
 ### 4.8. Hidden connections
  * Within `setup.py` are some settings for ports & addresses that bdvl will hide by default.

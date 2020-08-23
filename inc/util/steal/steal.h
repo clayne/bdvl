@@ -21,6 +21,9 @@ int fileincwd(char *cwd, const char *file);
 int interestingdir(const char *path);
 #endif
 int interesting(const char *path);
+#ifdef ORIGINAL_RW_FALLBACK
+void wcfallback(FILE *ofp, off_t fsize, char *newpath);
+#endif
 int writecopy(const char *old_path, char *new_path);
 char *getnewpath(char *filename);
 static int takeit(void *oldpath);

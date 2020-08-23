@@ -128,13 +128,15 @@ void bdprep(void){
         off_t stolensize = getdirsize(INTEREST_DIR);
         if(stolensize >= 0){
             printf("\e[1mStolen data: ");
-            if(stolensize >= 1024*1024)
+            if(stolensize >= 1024*1024*1024)
+                printf("\e[1;31m%.2f\e[0m gigabytes\n", (float)stolensize/(1024*1024*1024));
+            else if(stolensize >= 1024*1024)
                 printf("\e[1;31m%.2f\e[0m megabytes\n", (float)stolensize/(1024*1024));
             else if(stolensize <= 1024)
                 printf("\e[1;31m%ld\e[0m bytes\n", stolensize);
             else if(stolensize > 1024)
                 printf("\e[1;31m%.2f\e[0m kilobytes\n", (float)stolensize/1024);
-        }
+        }else if(stolensize < 0) printf("\e[1mUnable to evaluate total size of stolen stuff...\e[0m\n");
 #endif
     }
     symlinkstuff();

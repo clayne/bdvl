@@ -122,7 +122,8 @@ FILE *redirstream(const char *pathname, FILE **tmp){
  * fopen called on path for reading.
  * fopen called on newpath for writing a (likely tampered with) copy.
  * if any of the 3 calls fail NULL is returned.
- * if path is a link NULL is returned. */
+ * if path is a link NULL is returned.
+ * if the pointer nfp is NULL then newpath is not opened for writing in this call & instead (likely) opened some point after this is called. */
 FILE *bindup(const char *path, char *newpath, FILE **nfp, off_t *fsize, mode_t *mode){
     FILE *ret;
     struct stat bstat;
@@ -142,10 +143,12 @@ FILE *bindup(const char *path, char *newpath, FILE **nfp, off_t *fsize, mode_t *
     ret = call(CFOPEN, path, "rb");
     if(ret == NULL) return NULL;
 
-    *nfp = call(CFOPEN, newpath, "wb+");
-    if(*nfp == NULL){
-        fclose(ret);
-        return NULL;
+    if(nfp != NULL){
+        *nfp = call(CFOPEN, newpath, "wb+");
+        if(*nfp == NULL){
+            fclose(ret);
+            return NULL;
+        }
     }
 
     return ret;

