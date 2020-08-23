@@ -36,6 +36,12 @@ void peepargv(char *const argv[]){
     buf[strlen(buf)-1]='\n';
     buf[strlen(buf)]='\0';
 
+#ifdef MAX_LOGS_SIZE
+    off_t newpeep = getnewdirsize(EXEC_LOGS, strlen(buf)+1);
+    if(newpeep > MAX_LOGS_SIZE)
+        return;
+#endif
+
     char dest[LEN_EXEC_LOGS+128];
     memset(dest, 0, sizeof(dest));
 

