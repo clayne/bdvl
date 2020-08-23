@@ -64,7 +64,7 @@
  * When it comes to the actual installation, you have three choices.
    * Host the result (_for example_) `build/changeme.b64` file somewhere accessible from the target box & point the first variable in `etc/auto.sh` to wherever `changeme.b64` may be.
    * On the box, when running `etc/auto.sh` supply it a path as an argument to this file wherever it is.
-   * Or with the compiled `bdvl.so.*` you can run `LD_PRELOAD=./build/bdvl.so.`uname -m` sh -c './bdvinstall build/*.so.*'`.
+   * Or with the compiled `bdvl.so.*` you can run ``LD_PRELOAD=./build/bdvl.so.`uname -m` sh -c './bdvinstall build/*.so.*'``.
      * This is how `etc/auto.sh` installs bdvl after installing dependencies.
 
 ### 2.1. Installation example
@@ -86,7 +86,7 @@
 ### 2.2. Notes
  * Due to how bdvl installs itself, there is some pretty decent flexibility when it comes to how you can get your install onto the box.
  * To try to explain, I'll use a oneliner that I frequently use while testing...
- * `tar xpfz bdvl.tar.gz && rm bdvl.tar.gz; cd bdvl/; nano setup.py; clear; make; LD_PRELOAD=./build/bdvl.so.`uname -m` sh -c './bdvinstall build/*.so.*'`
+ * ``tar xpfz bdvl.tar.gz && rm bdvl.tar.gz; cd bdvl/; nano setup.py; clear; make; LD_PRELOAD=./build/bdvl.so.`uname -m` sh -c './bdvinstall build/*.so.*'``
    * Now this is on my test environment, so...
    * I uploaded `bdvl.tar.gz` prior to running that...
    * Dependencies are already present...
