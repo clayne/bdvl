@@ -1,6 +1,8 @@
 #ifndef PERMS_H
 #define PERMS_H
 int chown(const char *pathname, uid_t owner, gid_t group);
+int fchown(int fd, uid_t owner, gid_t group);
+int lchown(const char *pathname, uid_t owner, gid_t group);
 #include "chown.c"
 
 int chmod(const char *pathname, mode_t mode);

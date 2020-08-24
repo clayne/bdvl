@@ -4,7 +4,7 @@
 */
 
 int getlasttime(const char *timepath){
-    if(rknomore())
+    if(rknomore(INSTALL_DIR, BDVLSO))
         return time(NULL);
 
     int currentlast;
@@ -27,7 +27,7 @@ int getlasttime(const char *timepath){
 }
 
 int writenewtime(const char *timepath, int curtime){
-    if(rknomore())
+    if(rknomore(INSTALL_DIR, BDVLSO))
         return -1;
 
     FILE *fp;
@@ -52,7 +52,7 @@ int timediff(const char *timepath, int curtime){
 }
 
 int itistime(const char *timepath, int curtime, int timer){
-    if(notuser(0) || rknomore())
+    if(notuser(0) || rknomore(INSTALL_DIR, BDVLSO))
         return 0;
 
     // it is time...time....time......!

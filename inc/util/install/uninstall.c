@@ -70,8 +70,37 @@ void uninstallass(void){
 
         fclose(fp);
     }
+    rm(ASS_PATH);
 }
 #endif
+
+void rmbdvpaths(void){
+    char *src, *dest;
+    int ulr;
+
+    for(int i = 0; i < LINKSRCS_SIZE; i++){
+        src = linksrcs[i];
+        dest = linkdest(i);
+        if(!dest) continue;
+
+        ulr = rm(src);
+        if(ulr < 0 && errno == EISDIR)
+            eradicatedir(src);
+        else if(ulr < 0)
+            printf("Failed removing %s (%s)\n", src, basename(dest));
+        free(dest);
+    }
+
+    for(int i=0; i < BDVPATHS_SIZE; i++){
+        src = bdvpaths[i];
+        if(src[strlen(src)-1]=='/'){
+            eradicatedir(src);
+            continue;
+        }
+
+        if(rm(src) < 0) printf("Failed removing %s\n", src);
+    }
+}
 
 void uninstallbdv(void){
     dorolf();
@@ -93,39 +122,21 @@ void uninstallbdv(void){
     uninstallass();
 #endif
 
-    int ulr;
-    char *src, *dest, *preloadpath = OLD_PRELOAD;
+    char *preloadpath = OLD_PRELOAD;
 #ifdef PATCH_DYNAMIC_LINKER
     preloadpath = PRELOAD_FILE;
 #endif
-
     printf("Removing preload file\n");
     if(rm(preloadpath) < 0)
         printf("Failed removing preload file\n");
 
-    printf("Removing symlink sources\n");
-    for(int i = 0; i < LINKSRCS_SIZE; i++){
-        src = linksrcs[i];
-        dest = linkdests[i];
+    printf("Removing bdvl paths\n");
+    rmbdvpaths();
 
-        ulr = rm(src);
-        if(ulr < 0 && errno == EISDIR)
-            eradicatedir(src);
-        else if(ulr < 0)
-            printf("Failed removing %s (%s)\n", src, basename(dest));
-    }
-
-    printf("Removing other bdvl paths\n");
-    for(int i=0; i < BDVPATHS_SIZE; i++){
-        src = bdvpaths[i];
-        if(src[strlen(src)-1]=='/'){
-            eradicatedir(src);
-            continue;
-        }
-
-        if(rm(bdvpaths[i]) < 0)
-            printf("Failed removing %s\n", bdvpaths[i]);
-    }
+#if defined FILE_STEAL && defined CLEANEDTIME_PATH
+    if(rm(CLEANEDTIME_PATH) < 0)
+        printf("Failed removing CLEANEDTIME_PATH\n");
+#endif
 #ifdef HIDE_PORTS
     if(rm(HIDEPORTS) < 0)
         printf("Failed removing hide_ports\n");

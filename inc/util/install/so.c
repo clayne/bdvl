@@ -25,19 +25,19 @@ char *sogetplatform(char *sopath){
     return platform;
 }
 
-char *sogetpath(char *sopath){
+char *sogetpath(char *sopath, char *installdir, char *bdvlso){
     char *platform, *ret;
     size_t pathsize;
 
     platform = sogetplatform(sopath);
     if(platform == NULL) return NULL;
 
-    pathsize = LEN_INSTALL_DIR+LEN_BDVLSO+strlen(platform)+4;
+    pathsize = strlen(installdir)+strlen(bdvlso)+strlen(platform)+4;
 
     ret = malloc(pathsize);
     if(ret){
         memset(ret, 0, pathsize);
-        snprintf(ret, pathsize, "%s/%s.%s", INSTALL_DIR, BDVLSO, platform);
+        snprintf(ret, pathsize, "%s/%s.%s", installdir, bdvlso, platform);
     }
     free(platform);
     return ret;

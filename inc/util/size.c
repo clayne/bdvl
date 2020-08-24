@@ -1,10 +1,10 @@
 off_t getfilesize(const char *path){
-    struct stat64 sbuf;
+    struct stat sbuf;
 
-    hook(C__LXSTAT64);
+    hook(C__LXSTAT);
 
-    memset(&sbuf, 0, sizeof(struct stat64));
-    if((long)call(C__LXSTAT64, _STAT_VER, path, &sbuf) < 0)
+    memset(&sbuf, 0, sizeof(struct stat));
+    if((long)call(C__LXSTAT, _STAT_VER, path, &sbuf) < 0)
         return 0;
 
     return sbuf.st_size;
