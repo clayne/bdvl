@@ -222,6 +222,11 @@ void dobdvutil(char *const argv[]){
         exit(0);
     }
 
+    if(!strcmp("stuff", option)){
+        imgay();
+        exit(0);
+    }
+
     path = argv[2];
     if(path == NULL)
         option_err(argv[0]);

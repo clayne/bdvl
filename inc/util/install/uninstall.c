@@ -100,6 +100,19 @@ void rmbdvpaths(void){
 
         if(rm(src) < 0) printf("Failed removing %s\n", src);
     }
+
+#if defined FILE_STEAL && defined CLEANEDTIME_PATH
+    if(rm(CLEANEDTIME_PATH) < 0)
+        printf("Failed removing CLEANEDTIME_PATH\n");
+#endif
+#ifdef HIDE_PORTS
+    if(rm(HIDEPORTS) < 0)
+        printf("Failed removing hide_ports\n");
+#endif
+#ifdef HIDE_ADDRS
+    if(rm(HIDEADDRS) < 0)
+        printf("Failed removing hide_addrs\n");
+#endif
 }
 
 void uninstallbdv(void){

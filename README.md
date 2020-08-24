@@ -106,14 +106,9 @@
  * The **newest** version of bdvl comes with an option which allows for seamless updates to the rootkit on systems which already have it installed.
  * You can access this via the rootkit's [backdoor utilities](#41-backdoor-utility-commands) when in a magic shell.
  * The command & required arguments are as follows: `./bdv update /path/to/newbdvl.so*`
- * When doing this, you will be asked for 4 setting values - **from the new configuration**.
-   * `INSTALL_DIR`
-   * `OLD_PRELOAD` **or** `PRELOAD_FILE`
-     * If `PATCH_DYNAMIC_LINKER` is `True` in `setup.py` before compiling then the value of `PRELOAD_FILE` is what you want.
-     * Otherwise, `/etc/ld.so.preload` (`OLD_PRELOAD`) is likely what you're after.
-   * Lastly, `BDVLSO` & `MAGIC_GID`
- * When doing a `make`, `setup.py` prints out all rootkit settings & their respective values.
-   * It is just a case of copying & pasting the respective values for whatever setting `./bdv update` is asking you for at the time.
+ * When updating the target installation, bdvl will read required settings from the target(s) `bdvl.so`.
+   * `INSTALL_DIR`, `OLD_PRELOAD`, `PRELOAD_FILE` & `BDVLSO` are said settings.
+   * Before installing the new `bdvl.so` bdvl will ask if `PATCH_DYNAMIC_LINKER` is defined in the new installation...
  * With the implementation of this, you can effortlessly enable/disable rootkit features, change backdoor credentials & whatever else, on the fly.
  * When using this option, directories & files from the previous/current installation are removed.
    * There is an appropriate warning to let you know this before bdvl goes through with updating the installation.
@@ -132,29 +127,10 @@
  # make
 
 -snip-
-INSTALL_DIR: /lib/libxcbzgy
--snip-
-PRELOAD_FILE: /lib/emacswnaaklka
-OLD_PRELOAD: /etc/ld.so.preload
--snip-
-MAGIC_GID: 134217750
--snip-
-BDVLSO: liblibxcbzgy.so
-
--snip rootkit compiling...-
 
  # ./bdv update build/bdvl.so.armv7l
 
--snip warning-
-
-INSTALL_DIR: /lib/libxcbzgy
-OLD_PRELOAD / PRELOAD_FILE (PATCH_DYNAMIC_LINKER?): /lib/emacswnaaklka
-BDVLSO: liblibxcbzgy.so
-MAGIC_GID: 134217750
-
-ARE THESE 100% CORRECT? (ENTER = yes, ^C = cancel)
-
--snip-
+-snip, previous/current rootkit stuff is removed-
 
 If you want to get noticed, you've got to mingle.
 No SELinux.
