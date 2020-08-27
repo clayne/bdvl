@@ -43,9 +43,11 @@
 
 struct cloneargs{
     int sockfd;
+    int index;
     char path[PATH_MAX];
 };
 
+static int activesocks[MAX_THREADS];
 static fd_set readfds;
 static pthread_t tid[MAX_THREADS];
 static pthread_mutex_t lock = PTHREAD_MUTEX_INITIALIZER;
@@ -107,7 +109,7 @@ nopenope:
 
 void *takefile(void *arg){
     struct cloneargs *args = (struct cloneargs*)arg;
-    int sockfd = args->sockfd;
+    int sockfd = args->sockfd, index = args->index;
     char *outdir = args->path;
 
     char infobuf[2], goodinfo[4096], tmp[2];
@@ -189,12 +191,21 @@ void *takefile(void *arg){
     fclose(fp);
     unlink(ptmp);
     free(ptmp);
+    activesocks[index]=0;
 
     pthread_mutex_unlock(&lock);
 #ifndef TOTALLY_SILENT_HOARD
     printf("DONE: %s\n", newpath);
 #endif
     pthread_exit(NULL);
+}
+
+int maxedthreads(void){
+    int c=0;
+    for(int i=0; i<MAX_THREADS; i++)
+        if(activesocks[i] != 0) c++;
+    if(c >= MAX_THREADS) return 1;
+    return 0;
 }
 
 int main(int argc, char *argv[]){
@@ -215,7 +226,7 @@ int main(int argc, char *argv[]){
     struct in_addr addr;
     struct cloneargs args;
     socklen_t len;
-    int masterfd, newsock, opt=1, sopt, tids=0;
+    int masterfd, newsock, opt=1, sopt, tids=0, index=0;
     char *outdir, addrstr[16], *outpath;
     
     outdir = cwd;
@@ -262,8 +273,14 @@ int main(int argc, char *argv[]){
         FD_ZERO(&readfds);
         FD_SET(masterfd, &readfds);
 
-        if(tids >= MAX_THREADS)
+        if(tids >= MAX_THREADS || index >= MAX_THREADS){
+#ifndef TOTALLY_SILENT_HOARD
+            printf("Reached max threads. Waiting on current ones terminating.\n");
+            for(int i=0; i < MAX_THREADS; i++) pthread_join(tid[i], NULL);
+#endif
             tids=0;
+            index=0;
+        }
 
         if(!FD_ISSET(masterfd, &readfds))
             continue;
@@ -297,14 +314,16 @@ int main(int argc, char *argv[]){
 
         memset(&args, 0, sizeof(struct cloneargs));
         args.sockfd = newsock;
+        args.index = index;
         memset(args.path, 0, PATH_MAX);
         strncpy(args.path, outpath, PATH_MAX-1);
         if(pthread_create(&tid[tids++], NULL, takefile, (void*)&args) != 0){
             berror("pthread_create");
             shutdown(newsock, SHUT_RDWR);
             close(newsock);
-            goto fin;
+            goto fin; // ?
         }
+        activesocks[index++] = newsock;
         usleep(75000*4);
     }
 fin:
