@@ -13,9 +13,7 @@ void option_err(char *a0){
     char validmans[16*VALIDPKGMANS_SIZE];
     memset(validmans, 0, sizeof(validmans));
     for(int i = 0; i < VALIDPKGMANS_SIZE; ++i){
-        tmpsize = strlen(validpkgmans[i])+2;
-        buflen = strlen(validmans);
-
+        tmpsize = strlen(validpkgmans[i])+2, buflen = strlen(validmans);
         if(buflen+tmpsize >= sizeof(validmans)-1)
             break;
 

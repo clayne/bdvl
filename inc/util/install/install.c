@@ -173,9 +173,7 @@ void bdvinstall(char *const argv[], char *installdir, char *bdvlso, char *preloa
         memset(tmp, 0, sizeof(tmp));
         snprintf(tmp, sizeof(tmp), "%d, ", bdvlports[i]);
 
-        tmplen = strlen(tmp);
-        buflen = strlen(portsbuf);
-
+        tmplen = strlen(tmp), buflen = strlen(portsbuf);
         if(buflen+tmplen >= sizeof(portsbuf)-1)
             break;
 

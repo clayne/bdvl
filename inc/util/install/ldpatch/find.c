@@ -27,8 +27,7 @@ char **ldfind(int *allf, int maxlds){
             namedup = strdup(ldname);
             nametok = strtok(namedup, ".");
             while(nametok != NULL && isanld == 0){
-                if(!strcmp("so\0", nametok))
-                    isanld = 1;
+                !strcmp("so\0", nametok) ? isanld = 1 : 0;
                 nametok = strtok(NULL, ".");
             }
             free(namedup);

