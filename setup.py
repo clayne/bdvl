@@ -21,12 +21,12 @@ PAM_UNAME  = None  # set to None = random
 # dedicated port is written to the hide_ports file. so it can be changed...whatever port is
 # on the first line of hide_ports is always the port for the accept door...
 USE_ACCEPT_BD = True
-ACCEPT_PORT = None   # set to None = random
+ACCEPT_PORT   = None   # set to None = random
 
 # packets received from nonhidden ports are ignored.
 # the backdoor's normal behaviour is to select the first (default) interface it finds.
 # if you need to you can instead specify one with TARGET_INTERFACE.
-USE_ICMP_BD = True
+USE_ICMP_BD      = True
 TARGET_INTERFACE = None
 # if you change these remember to update etc/icmp.sh with the new values.
 MAGIC_ID  = 0xb10f
