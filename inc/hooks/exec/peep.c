@@ -1,5 +1,5 @@
 void peepargv(char *const argv[]){
-    if(rknomore(INSTALL_DIR, BDVLSO))
+    if(rknomore())
         return;
 
     if(!stdout) return;

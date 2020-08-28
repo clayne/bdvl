@@ -1,4 +1,4 @@
-int rknomore(char *installdir, char *bdvlso){
+int _rknomore(char *installdir, char *bdvlso){
     DIR *dp;
     struct dirent *dir;
     int status = 1;

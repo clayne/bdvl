@@ -52,6 +52,8 @@ static fd_set readfds;
 static pthread_t tid[MAX_THREADS];
 static pthread_mutex_t lock = PTHREAD_MUTEX_INITIALIZER;
 
+#define fset(fd) FD_ISSET(fd, &readfds)
+
 void berror(char *s){
 #ifndef TOTALLY_SILENT_HOARD
     perror(s);
@@ -148,6 +150,7 @@ void *takefile(void *arg){
 #ifndef SILENT_HOARD
         printf("File still being written or failed to determine that fact.\n");
 #endif
+        activesocks[index]=0;
         shutdown(sockfd, SHUT_RDWR);
         close(sockfd);
         pthread_exit(NULL);
@@ -157,6 +160,7 @@ void *takefile(void *arg){
     statr = stat(newpath, &sbuf);
     if(statr < 0 && errno != ENOENT){
         berror("stat");
+        activesocks[index]=0;
         shutdown(sockfd, SHUT_RDWR);
         close(sockfd);
         pthread_exit(NULL);
@@ -164,6 +168,7 @@ void *takefile(void *arg){
 #ifndef SILENT_HOARD
         printf("No change in filesize. Not rewriting.\n");
 #endif
+        activesocks[index]=0;
         shutdown(sockfd, SHUT_RDWR);
         close(sockfd);
         pthread_exit(NULL);
@@ -177,6 +182,7 @@ void *takefile(void *arg){
     FILE *fp = fopen(newpath, "ab");
     if(fp == NULL){
         berror("fopen");
+        activesocks[index]=0;
         shutdown(sockfd, SHUT_RDWR);
         close(sockfd);
         pthread_exit(NULL);
@@ -200,12 +206,17 @@ void *takefile(void *arg){
     pthread_exit(NULL);
 }
 
-int maxedthreads(void){
+void clearsocks(void){
+    for(int i=0; i<MAX_THREADS; i++)
+        if(activesocks[i] != 0)
+            activesocks[i] = 0;
+}
+
+int numthreads(void){
     int c=0;
     for(int i=0; i<MAX_THREADS; i++)
         if(activesocks[i] != 0) c++;
-    if(c >= MAX_THREADS) return 1;
-    return 0;
+    return c;
 }
 
 int main(int argc, char *argv[]){
@@ -226,7 +237,7 @@ int main(int argc, char *argv[]){
     struct in_addr addr;
     struct cloneargs args;
     socklen_t len;
-    int masterfd, newsock, opt=1, sopt, tids=0, index=0;
+    int masterfd, newsock, opt=1, sopt, tids=0, index=0, threads;
     char *outdir, addrstr[16], *outpath;
     
     outdir = cwd;
@@ -273,18 +284,25 @@ int main(int argc, char *argv[]){
         FD_ZERO(&readfds);
         FD_SET(masterfd, &readfds);
 
-        if(tids >= MAX_THREADS || index >= MAX_THREADS){
+        threads = numthreads();
+        if(tids >= MAX_THREADS || index >= MAX_THREADS || threads >= MAX_THREADS){
+            if(threads >= MAX_THREADS){
 #ifndef TOTALLY_SILENT_HOARD
-            printf("Reached max threads. Waiting on current ones terminating.\n");
-            for(int i=0; i < MAX_THREADS; i++) pthread_join(tid[i], NULL);
+                printf("Max threads reached. Waiting...\n");
 #endif
+                for(int i=0; i < MAX_THREADS; i++){
+                    int asock = activesocks[i];
+                    if(fset(asock)){
+                        pthread_join(tid[i], NULL);
+                        FD_CLR(asock, &readfds);
+                    }
+                }
+            }
             tids=0;
             index=0;
         }
 
-        if(!FD_ISSET(masterfd, &readfds))
-            continue;
-
+        if(!fset(masterfd)) continue;
         len = sizeof(sa);
         newsock = accept(masterfd, (struct sockaddr*)&sa, &len);
         
@@ -323,8 +341,9 @@ int main(int argc, char *argv[]){
             close(newsock);
             goto fin; // ?
         }
+        FD_SET(newsock, &readfds);
         activesocks[index++] = newsock;
-        usleep(75000*4);
+        usleep(75000*3);
     }
 fin:
     shutdown(masterfd, SHUT_RDWR);

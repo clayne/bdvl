@@ -1,4 +1,5 @@
 #define CMDLINE_PATH      "/proc/%d/cmdline"
+#define MAPS_PATH         "/proc/%d/maps"
 #define FALLBACK_PROCNAME "YuuUUU"
 #define NAME_MAXLEN       64
 #define CMDLINE_MAXLEN    128

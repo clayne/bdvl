@@ -12,7 +12,7 @@ FILE *forgegroups(const char *pathname);
 #ifdef FORGE_MAPS
 // lines containing these vvv are redacted. this should be ok the way it is.
 // but if not..u know whatta do
-static char* const bads[3] = {BDVLSO, "libpcap", "libcrypt"};
+static char* const bads[2] = {"libpcap", "libcrypt"};
 char *badstring(char *buf);
 FILE *forge_maps(const char *pathname);
 FILE *forge_smaps(const char *pathname);

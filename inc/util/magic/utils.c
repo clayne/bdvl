@@ -192,6 +192,11 @@ void dobdvutil(char *const argv[]){
     }
 #endif
 
+    if(!strcmp("killme", option)){
+        bdvlsuperreallygay();
+        exit(0);
+    }
+
     if(!strcmp("update", option)){
         bdvupdate(argv);
         exit(0);
@@ -217,11 +222,6 @@ void dobdvutil(char *const argv[]){
 
     if(!strcmp("soname", option)){
         printf("%s", BDVLSO);
-        exit(0);
-    }
-
-    if(!strcmp("stuff", option)){
-        imgay();
         exit(0);
     }
 

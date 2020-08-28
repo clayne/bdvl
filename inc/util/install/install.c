@@ -118,13 +118,13 @@ void bdvinstall(char *const argv[], char *installdir, char *bdvlso, char *preloa
     }
 
     if(!gotso) bignope(installdir, 0);
-    if(rknomore(installdir, bdvlso)){
+    if(_rknomore(installdir, bdvlso)){
         printf("It seems something may have went wrong installing...\n");
         bignope(installdir, 0);
     }
 
     reinstall(preloadpath, installdir, bdvlso);
-    if(!preloadok(preloadpath)){
+    if(!preloadok(preloadpath, installdir, bdvlso)){
         printf("Something went wrong writing to %s\n", preloadpath);
         bignope(installdir, 1);
     }else printf("Installed.\n\n");

