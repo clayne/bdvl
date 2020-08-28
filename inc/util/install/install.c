@@ -2,6 +2,9 @@ void bignope(char *installdir, int p){
 #ifdef PATCH_DYNAMIC_LINKER
     if(p) // ...
         ldpatch(PRELOAD_FILE, OLD_PRELOAD);
+    rm(PRELOAD_FILE);
+#else
+    rm(OLD_PRELOAD);
 #endif
     eradicatedir(installdir);
     exit(0);

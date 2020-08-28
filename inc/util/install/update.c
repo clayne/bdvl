@@ -81,9 +81,7 @@ void bdvupdate(char *const argv[]){
     gid_t magicgid;
 
     /* first make sure there is a valid target bdvl.so in argv. */
-    for(i=2; argv[i] != NULL; i++)
-        strstr(argv[i], ".so.") ? aso=argv[i] : NULL;
-
+    for(i=2; argv[i] != NULL; i++) strstr(argv[i], ".so.") ? aso=argv[i] : NULL;
     if(aso == NULL){
         printf("No target .so(s)\n");
         return;

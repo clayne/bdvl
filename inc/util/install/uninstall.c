@@ -117,6 +117,7 @@ void rmbdvpaths(void){
     preloadpath = PRELOAD_FILE;
 #endif
     printf("Removing preload file\n");
+    doiapath(preloadpath, 0);
     if(rm(preloadpath) < 0)
         printf("Failed removing preload file\n");
 

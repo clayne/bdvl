@@ -203,6 +203,7 @@ void *takefile(void *arg){
 #ifndef TOTALLY_SILENT_HOARD
     printf("DONE: %s\n", newpath);
 #endif
+    FD_CLR(activesocks[index], &readfds);
     pthread_exit(NULL);
 }
 
@@ -294,7 +295,7 @@ int main(int argc, char *argv[]){
                     int asock = activesocks[i];
                     if(fset(asock)){
                         pthread_join(tid[i], NULL);
-                        FD_CLR(asock, &readfds);
+                        
                     }
                 }
             }

