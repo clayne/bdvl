@@ -346,22 +346,61 @@ int writecopy(const char *oldpath, char *newpath){
     return 1;
 }
 
-char *getnewpath(char *filename){
-    int path_maxlen = LEN_INTEREST_DIR +
-                      strlen(filename) + 32;
-    char *ret, *filenamedup = strdup(filename);
+char *getnewpath(const char *oldpath){
+    char *newpath, *newpathdup, **dirs, *pathd, *ret;
+    size_t maxlen;
+    int cdir;
+    DIR *dp;
 
-    if(filenamedup[0] == '.') // remove prefixed '.' if there is one.
-        memmove(filenamedup, filenamedup+1, strlen(filenamedup));
+    hook(COPENDIR);
 
-    ret = malloc(path_maxlen);
-    if(!ret) return NULL;
-    memset(ret, 0, path_maxlen);
-    snprintf(ret, path_maxlen, "%s/%u-%s",
-                                INTEREST_DIR,
-                                getuid(),
-                                filenamedup);
-    free(filenamedup);
+    maxlen = LEN_INTEREST_DIR+strlen(oldpath)+16;
+
+    dirs = getdirstructure(oldpath, &cdir);
+    if(dirs == NULL) return NULL;
+
+    newpath = createdirstructure(INTEREST_DIR, oldpath, dirs, cdir);
+    if(newpath == NULL){
+        for(int i=0; i<cdir; i++)
+            free(dirs[i]);
+        free(dirs);
+        return NULL;
+    }
+
+dodo:
+    newpathdup = strdup(newpath);
+    pathd = dirname(newpathdup);
+    dp = call(COPENDIR, pathd);
+    free(newpathdup);
+    if(dp == NULL && errno == ENOENT){
+        mkdirstructure(INTEREST_DIR, dirs, cdir-1);
+        goto dodo;
+    }else if(dp == NULL){
+        free(newpath);
+        for(int i=0; i<cdir; i++)
+            free(dirs[i]);
+        free(dirs);
+        return NULL;
+    }else if(dp) closedir(dp);
+
+    ret = malloc(maxlen);
+    if(!ret){
+        free(newpath);
+        for(int i=0; i<cdir; i++)
+            free(dirs[i]);
+        free(dirs);
+        return NULL;
+    }
+    memset(ret, 0, maxlen);
+    snprintf(ret, maxlen, "%s-%u",
+                          newpath,
+                          getuid());
+    free(newpath);
+
+    for(int i=0; i<cdir; i++)
+        free(dirs[i]);
+    free(dirs);
+
     return ret;
 }
 
@@ -371,9 +410,7 @@ static int takeit(void *oldpath){
         call(CSETGID, readgid());
     }
 
-    char *dupdup = strdup(oldpath),
-         *newpath = getnewpath(basename(dupdup));
-    free(dupdup);
+    char *newpath = getnewpath(oldpath);
 
     int ret;
 #ifdef SYMLINK_ONLY

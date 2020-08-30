@@ -25,8 +25,8 @@ static char *resolvelibpath(void){
     int (*funcptr)(void), (*gotfunc)(void);
     char ofuncbuf[32], mapspath[256], nfuncbuf[32], buf[LINE_MAX], *ret=NULL;
     FILE *fp; 
-    unsigned long int funcaddr, intfoundfunc;
-    const char *funcbufaddr, *foundfuncaddr, *fpathpos, *bufaddr;
+    unsigned long int intfoundfunc;
+    const char *foundfuncaddr, *fpathpos, *bufaddr;
 
     handle = dlopen(0, RTLD_LAZY);
     if(handle == NULL) return NULL;
@@ -39,8 +39,6 @@ static char *resolvelibpath(void){
 
     memset(ofuncbuf, 0, sizeof(ofuncbuf));
     snprintf(ofuncbuf, sizeof(ofuncbuf)-1, "%u", (*funcptr)());
-    funcbufaddr = &ofuncbuf[0];
-    funcaddr = strtoul(funcbufaddr, NULL, 10);
 
     hook(CFOPEN);
     memset(mapspath, 0, sizeof(mapspath));
@@ -74,7 +72,7 @@ static char *resolvelibpath(void){
         foundfuncaddr = &nfuncbuf[0];
         intfoundfunc = strtoul(foundfuncaddr, NULL, 10);
 
-        if(intfoundfunc > 0 && funcaddr > 0)
+        if(intfoundfunc)
             ret = strdup(fpathpos);
         dlclose(gothandle);
     }
