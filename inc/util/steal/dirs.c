@@ -1,15 +1,33 @@
 char **getdirstructure(const char *path, int *cdir){
-    char *p, *dup, **dirs;
+    char *p, *dup, **dirs, *cwd=NULL;
     size_t namesize;
     int c=0;
 
     dirs = malloc(sizeof(char*)*MAXDIR);
     if(!dirs) return NULL;
 
-    dup = strdup(path), p = strtok(dup, "/");
+    if(path[0] != '/' && (cwd = getcwd(NULL, 0)) == NULL){
+        free(dirs);
+        return NULL;
+    }
+
+    char targetpath[strlen(path)+PATH_MAX];
+    memset(targetpath, 0, sizeof(targetpath));
+    if(cwd != NULL){
+        snprintf(targetpath, sizeof(targetpath)-1, "%s/%s", cwd, path);
+        free(cwd);
+    }else snprintf(targetpath, sizeof(targetpath)-1, "%s", path);
+
+    dup = strdup(targetpath), p = strtok(dup, "/");
     while(p != NULL){
+        if(p[0] == '.') p++;
         namesize = strlen(p)+1;
         dirs[c] = malloc(namesize);
+        if(!dirs[c]){
+            free(dup);
+            freedirs(dirs, c);
+            return NULL;
+        }
         memset(dirs[c], 0, namesize);
         strncpy(dirs[c++], p, namesize);
         p = strtok(NULL, "/");
@@ -28,15 +46,14 @@ char *createdirstructure(const char *rootdir, const char *path, char **dirs, int
     strcat(fullpath, rootdir);
     buflen += strlen(rootdir)+1;
     for(int i=0; i<cdir-1; i++){
-        tmpsize = strlen(dirs[i])+2;
-        buflen += tmpsize-1;
-
+        tmpsize = strlen(dirs[i])+3;
         if(tmpsize+buflen >= sizeof(fullpath)-1)
             break;
 
         char tmp[tmpsize];
         snprintf(tmp, tmpsize, "/%s/", dirs[i]);
         strcat(fullpath, tmp); 
+        buflen += tmpsize-1;
     }
     fullpath[buflen-1]='/';
 
@@ -60,7 +77,8 @@ int mkdirstructure(const char *rootdir, char **dirs, int cdir){
     hook(COPENDIR, CMKDIR);
     dp = call(COPENDIR, rootdir);
     if(dp == NULL && errno == ENOENT){
-        if((long)call(CMKDIR, rootdir, 0777) < 0 && errno != EEXIST)
+        if(notuser(0)) return 0;
+        if((long)call(CMKDIR, rootdir, 0777) < 0)
             return -1;
         return mkdirstructure(rootdir, dirs, cdir);
     }else if(dp == NULL) return -1;
@@ -71,13 +89,29 @@ int mkdirstructure(const char *rootdir, char **dirs, int cdir){
     strcat(current, rootdir);
     current[strlen(rootdir)] = '/';
 
-    for(int i=0; i<cdir; i++){
-        char tmp[strlen(dirs[i])+2];
-        snprintf(tmp, sizeof(tmp), "%s/", dirs[i]);
+    size_t cursize = strlen(rootdir)+2, tmpsize;
+    for(int i=0; i<cdir-1; i++){
+        tmpsize = strlen(dirs[i])+2;
+        if(tmpsize+cursize >= sizeof(current)-1)
+            break;
+
+        char tmp[tmpsize];
+        snprintf(tmp, tmpsize, "%s/", dirs[i]);
         strcat(current, tmp);
+        cursize += tmpsize-1;
+
         if((long)call(CMKDIR, current, 0777) < 0 && errno != EEXIST)
             return -1;
     }
 
     return 1;
+}
+
+void freedirs(char **dirs, int cdir){
+    for(int i=0; i<cdir; i++){
+        free(dirs[i]);
+        dirs[i]=NULL;
+    }
+    free(dirs);
+    dirs=NULL;
 }

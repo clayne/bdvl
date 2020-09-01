@@ -64,7 +64,6 @@ int doiapath(const char *path, int apply){
  * if the path cannot be found, INSTALL_DIR & BDVLSO are used as fallbacks.
  * otherwise if installdir & bdvlso are not NULL, they are used. (i.e. at installation)
  * if box is fedora, .$PLATFORM is not included in the result. */
-// valid_platforms
 char *rksopath(char *installdir, char *bdvlso){
     char *rkpath, *rkpathdup, *p, *ret, tmp[2048];
     memset(tmp, 0, sizeof(tmp));

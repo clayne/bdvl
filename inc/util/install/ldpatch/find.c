@@ -1,5 +1,6 @@
-// searches all ldhomes directories for ld.so & returns an array of char pointers to each valid ld.so.
-// the pointer allf is updated with the number of located ld.so.
+/* searches all ldhomes directories for a maximum of maxlds ld.so & returns an array of char pointers to each valid ld.so.
+ * the pointer allf is updated with the number of located ld.so.
+ * if a search result is a symlink it is skipped. */
 char **ldfind(int *allf, int maxlds){
     char **foundlds = malloc(sizeof(char*)*maxlds);
     if(!foundlds) return NULL;

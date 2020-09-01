@@ -16,15 +16,15 @@ setup:
 	mkdir -p ./build
 	python setup.py
 
-kit: $(INC)/bedevil.c
-	$(CC) -std=gnu99 -g $(OPTION_FLAGS) $(WARNING_FLAGS) -I$(INC) -shared -Wl,--build-id=none $(INC)/bedevil.c $(R_LFLAGS) -o build/$(SONAME).$(PLATFORM)
-	-$(CC) -m32 -std=gnu99 -g $(OPTION_FLAGS) $(WARNING_FLAGS) -I$(INC) -shared -Wl,--build-id=none $(INC)/bedevil.c $(R_LFLAGS) -o build/$(SONAME).i686
+kit: $(INC)/bdv.c
+	$(CC) -std=gnu99 -g $(OPTION_FLAGS) $(WARNING_FLAGS) -I$(INC) -shared -Wl,--build-id=none $(INC)/bdv.c $(R_LFLAGS) -o build/$(SONAME).$(PLATFORM)
+	-$(CC) -m32 -std=gnu99 -g $(OPTION_FLAGS) $(WARNING_FLAGS) -I$(INC) -shared -Wl,--build-id=none $(INC)/bdv.c $(R_LFLAGS) -o build/$(SONAME).i686
 	strip build/$(SONAME)*
 
 clean:
 	rm -f etc/hoarder
 	rm -rf build/$(SONAME)* $(INC)/config.h
-	echo '/* setup.py territory */' > $(INC)/bedevil.h
+	echo '/* setup.py territory */' > $(INC)/bdv.h
 
 cleanall: clean
 	rm -rf build

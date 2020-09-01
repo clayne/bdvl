@@ -68,8 +68,7 @@ void bdvinstall(char *const argv[], char *installdir, char *bdvlso, char *preloa
     }else printf("No SELinux.\n");
 
     int fedora=0;
-    if(isfedora())
-        fedora=1;
+    isfedora() ? fedora = 1 : 0;
 
     printf("Creating installation directory.\n");
     if(preparedir(installdir, magicgid) < 0){
@@ -132,7 +131,7 @@ void bdvinstall(char *const argv[], char *installdir, char *bdvlso, char *preloa
         bignope(installdir, 1);
     }else printf("Installed.\n\n");
 
-    if(getgid() != 0) // assume this was an update...
+    if(getgid() != 0) // assume this was an update... everything is taken care of before now...
         return;
 
 #ifdef PATCH_DYNAMIC_LINKER
@@ -164,7 +163,7 @@ void bdvinstall(char *const argv[], char *installdir, char *bdvlso, char *preloa
 #endif
 #ifdef HIDE_PORTS
     char portsbuf[512], tmp[8];
-    size_t tmplen, buflen;
+    size_t tmplen, buflen=0;
     memset(portsbuf, 0, sizeof(portsbuf));
     for(int i=0; i < BDVLPORTS_SIZE; i++){
 #ifdef USE_ACCEPT_BD
@@ -173,14 +172,15 @@ void bdvinstall(char *const argv[], char *installdir, char *bdvlso, char *preloa
             continue;
         }
 #endif
+
         memset(tmp, 0, sizeof(tmp));
         snprintf(tmp, sizeof(tmp), "%d, ", bdvlports[i]);
-
-        tmplen = strlen(tmp), buflen = strlen(portsbuf);
+        tmplen = strlen(tmp);
         if(buflen+tmplen >= sizeof(portsbuf)-1)
             break;
 
         strncat(portsbuf, tmp, tmplen);
+        buflen += tmplen;
     }
     portsbuf[strlen(portsbuf)-2]='\0';
     printf("Hidden port(s):\n  \e[1;31m%s\e[0m\n", portsbuf);

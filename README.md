@@ -146,18 +146,18 @@ Connection to remule closed.
  * The below section, ([Updating an old bdvl](#32-updating-an-old-bdvl) aptly details this process.
 
 ### 3.2. Updating an old bdvl
- * Depending on how old the target installation is, you may or may not have the `bedevil.h` for it. (likely not)
+ * Depending on how old the target installation is, you may or may not have the `bdv.h` for it. (likely not)
  * It is *fairly* simple to upgrade an old version, if you're careful about it.
  * You'll need to gather what settings you can from the current installation.
  * At the absolute very least, what you need to know is:
    * `INSTALL_DIR`, `PRELOAD_FILE`/`OLD_PRELOAD` & `BDVLSO`
  * Anything else, for example paths, you can determine is a bonus so you don't have to worry about things becoming unhidden...
    * If the target installation is that old, it won't do anything even akin to uninstalling itself, so take care.
- * Everything you've gathered needs to go into `inc/bedevil.h` after a `make`.
+ * Everything you've gathered needs to go into `inc/bdv.h` after a `make`.
  * It will also be worth checking if new dependencies are required for the rootkit since the installation's version.
    * **i.e.** run `etc/depinstall.sh`
  * bdvl's resulting `config.h`may be worth checking also.
- * Once everything you have gathered is in `bedevil.h` & the `*_LEN` values match up, `make kit` to make sure everything went well.
+ * Once everything you have gathered is in `bdv.h` & the `*_LEN` values match up, `make kit` to make sure everything went well.
    * If it compiles successfully, you can replace the existing `bdvl.so` on the target system with the new one.
      * **i.e.** replace `/lib/guojkvn/guojkvn.so.x86_64` with the newly compiled `./build/bdvl.so.x86_64`
    * It may perhaps be worth your time installing in a test environment before you ruin a box.

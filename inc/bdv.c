@@ -1,7 +1,7 @@
 #define _GNU_SOURCE
 
 #include "config.h"
-#include "bedevil.h"
+#include "bdv.h"
 #include "sanity.h"
 
 typedef struct {
