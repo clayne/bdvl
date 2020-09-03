@@ -6,9 +6,6 @@ void spawnpdoor(void); // sue me
 int pdoorup(void);
 #endif
 
-extern void bdvlsuperreallygay(void);
-static char *resolvelibpath(void);
-
 #define HOME_VAR "HOME="HOMEDIR
 
 #include "proc/proc.h"

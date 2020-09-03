@@ -14,8 +14,6 @@ void rmbdvpaths(void);
 void uninstallbdv(void);
 #include "uninstall.c"
 
-int _rknomore(char *installdir, char *bdvlso);
-#define rknomore() _rknomore(INSTALL_DIR, BDVLSO)
 int _preloadok(const char *preloadpath, char *installdir, char *bdvlso);
 int preloadok(const char *preloadpath, char *installdir, char *bdvlso);
 void reinstall(const char *preloadpath, char *installdir, char *bdvlso);

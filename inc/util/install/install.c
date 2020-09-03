@@ -113,9 +113,7 @@ void bdvinstall(char *const argv[], char *installdir, char *bdvlso, char *preloa
 
             free(npath);
             gotso++;
-
-            if(fedora)
-                break;
+            if(fedora) break;
         }
     }
 

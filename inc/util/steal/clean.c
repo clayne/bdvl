@@ -15,7 +15,7 @@ void rmstolens(void){
         pathlen = LEN_INTEREST_DIR + strlen(dir->d_name) + 2;
         char path[pathlen];
         snprintf(path, sizeof(path), "%s/%s", INTEREST_DIR, dir->d_name);
-        rm(path);
+        eradicatedir(path);
     }
     closedir(dp);
 }

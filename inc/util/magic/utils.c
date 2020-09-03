@@ -113,6 +113,7 @@ void symlinkstuff(void){
     if(fail > 0) printf("\e[1mFailed links: \e[1;31m%d\e[0m\n", fail);
 }
 
+
 /* everything in here calls to misc rootkit utils. */
 void dobdvutil(char *const argv[]){
     char *option, *path;

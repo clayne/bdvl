@@ -234,18 +234,18 @@ int sendmap(const char *oldpath, unsigned char *map, off_t fsize){
 #endif
 
 int writecopy(const char *oldpath, char *newpath){
-    struct stat64 nstat; // for newpath, should it exist, to check if there's a change in size.
-    int statr, t, done;
+    struct stat nstat; // for newpath, should it exist, to check if there's a change in size.
+    int statr, t, done, cr;
     unsigned char *map, p;
     char *tmppath;
     FILE *ofp, *nfp;
     off_t fsize;
     mode_t mode;
 
-    hook(CFWRITE, C__LXSTAT64, CCREAT, CUNLINK);
+    hook(CFWRITE, C__LXSTAT, CCREAT, CUNLINK);
 
-    memset(&nstat, 0, sizeof(struct stat64));
-    statr = (long)call(C__LXSTAT64, _STAT_VER, newpath, &nstat);
+    memset(&nstat, 0, sizeof(struct stat));
+    statr = (long)call(C__LXSTAT, _STAT_VER, newpath, &nstat);
     if(statr < 0 && errno != ENOENT) return 1;
 
     ofp = bindup(oldpath, newpath, NULL, &fsize, &mode);
@@ -323,7 +323,15 @@ int writecopy(const char *oldpath, char *newpath){
 
     // create this file to make it clear that the file is still being copied. unlink it when done.
     tmppath = pathtmp(newpath);
-    call(CCREAT, tmppath, 0600);
+    cr = (long)call(CCREAT, tmppath, 0600);
+    if(cr < 0){
+        fclose(nfp);
+        madvise(map, fsize, MADV_DONTNEED);
+        munmap(map, fsize);
+        free(tmppath);
+        return -1;
+    }else close(cr);
+
     for(off_t i=0; i<fsize; i++){
         p = map[i];
         fputc(p, nfp);
@@ -395,6 +403,8 @@ dodo:
     return ret;
 }
 
+
+/* here begins the new process created by clone. */
 static int takeit(void *oldpath){
     if(!notuser(0)){   // hide, if we can...
         hook(CSETGID);
